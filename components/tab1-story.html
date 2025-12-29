@@ -3,7 +3,7 @@
     <div class="flex justify-between items-end">
         <div>
             <h2 class="text-2xl font-bold text-white">Konsep Cerita</h2>
-            <p class="text-xs text-gray-400">Tulis ide kasarmu, AI akan merapikannya.</p>
+            <p class="text-xs text-gray-400">Tulis ide kasarmu, AI akan mengubahnya menjadi Naskah Master.</p>
         </div>
         
         <!-- Toggle Dialog -->
@@ -16,26 +16,43 @@
         </div>
     </div>
 
-    <!-- Text Area -->
+    <!-- INPUT AREA (Ide Kasar) -->
     <div class="relative group">
+        <label class="text-xs text-accent font-bold mb-1 block">IDE KASAR / KONSEP:</label>
         <textarea id="story-input" 
-            class="w-full h-64 bg-black/30 text-gray-200 p-6 rounded-2xl border border-white/10 focus:border-accent focus:ring-1 focus:ring-accent/50 focus:outline-none resize-none text-lg leading-relaxed transition-all backdrop-blur-sm"
-            placeholder="Contoh: Di tahun 2045, Jono si hacker mencoba mencuri data dari korporasi raksasa..."></textarea>
+            class="w-full h-32 bg-black/30 text-gray-300 p-4 rounded-xl border border-white/10 focus:border-accent focus:outline-none resize-none text-sm transition-all"
+            placeholder="Contoh: Jono si cyborg ketemu Siti di pasar gelap..."></textarea>
     </div>
 
-    <!-- Character Tags Area -->
-    <div id="char-tags-container" class="hidden glass-panel p-4 rounded-xl border-l-4 border-accent">
-        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">
-            <i class="ph ph-users"></i> Karakter Terdeteksi
-        </label>
-        <div id="tags-list" class="flex flex-wrap gap-2"></div>
+    <!-- RESULT AREA (Hasil AI - Awalnya Hidden) -->
+    <div id="result-area" class="hidden space-y-4 animate-fade-in">
+        <div class="glass-panel p-6 rounded-xl border-l-4 border-accent">
+            <div class="flex justify-between items-center mb-4">
+                <label class="text-xs text-white font-bold uppercase tracking-widest">
+                    <i class="ph ph-scroll"></i> Master Script (AI Generated)
+                </label>
+                <button onclick="copyStory()" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-gray-300 transition-colors">
+                    <i class="ph ph-copy"></i> Copy
+                </button>
+            </div>
+            <!-- Disini tempat teks cerita muncul -->
+            <div id="final-story-text" class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap font-serif"></div>
+        </div>
+
+        <!-- Character Tags Area -->
+        <div id="char-tags-container" class="glass-panel p-4 rounded-xl">
+            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">
+                <i class="ph ph-users"></i> Karakter Terdeteksi
+            </label>
+            <div id="tags-list" class="flex flex-wrap gap-2"></div>
+        </div>
     </div>
 
     <!-- Action Buttons -->
     <div class="flex justify-end pt-4">
         <button id="btn-analyze" class="btn-neon px-8 py-3 rounded-xl font-bold flex items-center gap-2">
             <i class="ph ph-magic-wand text-lg"></i>
-            <span>Analisa & Generate</span>
+            <span>Generate Story & Characters</span>
         </button>
 
         <button id="btn-next-tab" onclick="switchTab(2)" class="hidden btn-neon bg-white text-black px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-200">
@@ -43,4 +60,4 @@
             <i class="ph ph-arrow-right"></i>
         </button>
     </div>
-</div>
+                </div>
