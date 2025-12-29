@@ -94,47 +94,98 @@ async function callAI(model, prompt, isJsonMode = false) {
 // WRAPPER FUNCTIONS (Fungsi Khusus)
 // ==========================================
 
-// 1. GENERATE STORY (Claude)
-async function generateStoryAI(topic, useDialog) {
+// ==========================================
+// 1. GENERATE STORY & CHARACTERS (ONE-SHOT)
+// ==========================================
+async function generateStoryAndChars(topic, useDialog) {
     const mode = useDialog ? 'Naskah Full Dialog (Script Format)' : 'Cerita Narasi Novel';
     
-    const prompt = `Tulis cerita sci-fi/fantasy profesional dan detail berdasarkan konsep ini: "${topic}".
+    // RAHASIA AGAR TIDAK KENA RATE LIMIT: 
+    // Minta AI kerjakan 2 tugas dalam 1 kali panggil.
+    // Kita pakai pemisah unik "###DATA_KARAKTER###" biar gampang dipisah kodingan.
     
-    Setting Mode: ${mode}.
-    Bahasa: Indonesia.
-    Gaya Bahasa: Sinematik, detail, emosional.
-    
-    Output hanya isi ceritanya saja tanpa pembuka/penutup basa-basi dari AI.`;
-    
-    // Panggil model story (Claude)
-    return await callAI(CONFIG.AI_MODELS.story, prompt);
-}
+    const prompt = `
+    Tugas Utama: Tulis cerita sci-fi/fantasy profesional berdasarkan konsep: "${topic}".
+    Mode: ${mode}. Bahasa: Indonesia. Gaya: Sinematik & Detail.
 
-// ... kode callAI sebelumnya tetap sama ...
+    Tugas Kedua (WAJIB): Setelah cerita selesai, buat baris baru, tulis pemisah "###DATA_KARAKTER###", lalu buat JSON Array berisi tokoh utama.
+    Format JSON: [{"name": "Nama Tokoh", "visual": "Deskripsi fisik visual singkat (baju, wajah, rambut) dalam Bahasa Inggris untuk prompt gambar AI"}].
 
-// 2. EXTRACT CHARACTERS (UPGRADE: NAME + VISUAL)
-async function extractCharactersAI(storyText) {
-    // Prompt kita pertajam: Minta JSON Object dengan properti 'name' dan 'visual'
-    const prompt = `Analisa cerita berikut. Identifikasi tokoh utama.
-    Output HANYA JSON Array of Objects. 
-    Format: [{"name": "Nama Tokoh", "visual": "Deskripsi fisik visual singkat padat untuk prompt gambar AI (baju, rambut, wajah), max 20 kata per tokoh, bahasa Inggris"}].
+    Contoh Output yang diminta:
+    [Isi Cerita Panjang Disini...]
     
-    Jangan ada penjelasan lain. Cerita:\n${storyText}`;
+    ###DATA_KARAKTER###
+    [{"name": "Jono", "visual": "Cyborg, glowing red eye, messy hair, leather jacket"}]
+    `;
     
-    // Panggil model logic
-    const raw = await callAI(CONFIG.AI_MODELS.logic, prompt, true);
+    // Panggil Model (Claude paling pinter ngikutin instruksi ribet gini)
+    const rawResult = await callAI(CONFIG.AI_MODELS.story, prompt);
     
-    try {
-        return JSON.parse(raw);
-    } catch (e) {
-        console.warn("JSON Parse gagal, mencoba Regex Match...", e);
-        const m = raw.match(/\[([\s\S]*?)\]/);
-        if (m) {
-            try { return JSON.parse(m[0]); } catch (e2) { return []; }
+    // --- LOGIC PEMISAH (SPLITTER) ---
+    // Kita pisahkan Cerita dan JSON berdasarkan tanda "###DATA_KARAKTER###"
+    
+    let storyText = "";
+    let characters = [];
+
+    if (rawResult.includes("###DATA_KARAKTER###")) {
+        const parts = rawResult.split("###DATA_KARAKTER###");
+        storyText = parts[0].trim(); // Bagian Atas (Cerita)
+        const jsonPart = parts[1].trim(); // Bagian Bawah (JSON)
+        
+        // Bersihin JSON
+        try {
+            const clean = cleanJSON(jsonPart);
+            // Cari kurung siku [] jaga-jaga ada teks sisa
+            const m = clean.match(/\[([\s\S]*?)\]/);
+            if(m) {
+                characters = JSON.parse(m[0]);
+            } else {
+                characters = JSON.parse(clean);
+            }
+        } catch (e) {
+            console.warn("Gagal parse JSON karakter otomatis:", e);
+            // Fallback: Kalau gagal parse, return array kosong biar gak error
+            characters = [];
         }
-        return []; 
+    } else {
+        // Kalau AI lupa kasih pemisah, anggap semua adalah cerita
+        storyText = rawResult;
+        console.warn("AI lupa kasih data karakter terpisah.");
     }
+
+    // Kembalikan 2 data sekaligus
+    return {
+        story: storyText,
+        characters: characters
+    };
 }
+
+// Hapus fungsi generateStoryAI yang lama biar gak bingung
+// Hapus fungsi extractCharactersAI yang lama (opsional, biarin aja buat cadangan)
+// 2. EXTRACT CHARACTERS (UPGRADE: NAME + VISUAL)
+//dibawah ini aku non aktifke dlu
+//async function extractCharactersAI(storyText) {
+    // Prompt kita pertajam: Minta JSON Object dengan properti 'name' dan 'visual' komen
+    //const prompt = `Analisa cerita berikut. Identifikasi tokoh utama.
+    //Output HANYA JSON Array of Objects. 
+    //Format: [{"name": "Nama Tokoh", "visual": "Deskripsi fisik visual singkat padat untuk prompt gambar AI (baju, rambut, wajah), max 20 kata per tokoh, bahasa Inggris"}].
+    
+    //Jangan ada penjelasan lain. Cerita:\n${storyText}`;
+    
+    // Panggil model logic komen
+    //const raw = await callAI(CONFIG.AI_MODELS.logic, prompt, true);
+    
+   // try {
+        //return JSON.parse(raw);
+    //} catch (e) {
+        //console.warn("JSON Parse gagal, mencoba Regex Match...", e);
+        //const m = raw.match(/\[([\s\S]*?)\]/);
+        //if (m) {
+            //try { return JSON.parse(m[0]); } catch (e2) { return []; }
+        //}
+        //return []; 
+    //}
+//}
 
 // ... sisa file tetap sama ...
 
