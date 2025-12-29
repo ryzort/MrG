@@ -79,9 +79,9 @@ function checkRouteAllowed(route){
 }
 
 // subscribe to route changes
-appState.subscribe('route', (route)=>{
+window.appState.subscribe('route', (route)=>{
   mount(route);
 });
 
 // initial mount
-mount(appState.get('route') || 'projects');
+mount(window.appState.get('route') || 'projects');
