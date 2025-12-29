@@ -114,71 +114,48 @@ window.setupTab1 = function() {
 
     // 3. Logic Tombol Generate
     if (btnAnalyze) {
-        btnAnalyze.onclick = async () => {
-            const text = storyInput.value.trim();
-            if (!text) {
-                alert("Tulis dulu ceritanya bro!");
-                return;
-            }
+    btnAnalyze.onclick = async () => {
+        const text = storyInput.value.trim();
+        if (!text) return alert("Isi cerita dulu!");
 
-            STATE.updateStory(text, isDialogOn);
+        STATE.updateStory(text, isDialogOn);
+        
+        // UI Loading
+        const originalText = btnAnalyze.innerHTML;
+        btnAnalyze.innerHTML = `<i class="ph ph-spinner animate-spin text-xl"></i> <span>Sedang Berpikir (Claude)...</span>`;
+        btnAnalyze.disabled = true;
 
-            const originalText = btnAnalyze.innerHTML;
-            btnAnalyze.innerHTML = `<i class="ph ph-spinner animate-spin text-xl"></i> <span>Membaca Cerita...</span>`;
-            btnAnalyze.disabled = true;
+        try {
+            // 1. Kalau user ngetik ide kasar, kita bikinin cerita dulu (Opsional, atau langsung extract)
+            // Sesuai kode lu: User input ide -> AI bikin cerita -> AI extract karakter
+            
+            // Anggap input user itu udah cerita jadi (atau mau digenerate dlu? 
+            // Kalau mau generate dlu kek app.js lu, pake logic ini:)
+            /* 
+               const storyResult = await generateStoryAI(text, isDialogOn); 
+               storyInput.value = storyResult; // Update textarea dengan cerita full
+               STATE.updateStory(storyResult, isDialogOn);
+            */
 
-            try {
-                // Prompt: Extract names
-                const promptMessages = [
-                    {
-                        role: "system",
-                        content: "Extract names. Output JSON array only. Example: [\"Jono\", \"Siti\"]."
-                    },
-                    {
-                        role: "user",
-                        content: `Extract character names from: ${text}`
-                    }
-                ];
+            // 2. Extract Karakter (Pake logic lu yang solid)
+            const characters = await extractCharactersAI(storyInput.value); // Pake text yg ada di input
 
-                const resultRaw = await generateText(promptMessages, 'json'); 
-                
-                let characters = [];
-                try {
-                    const cleanJson = resultRaw.replace(/```json|```/g, '').trim();
-                    characters = JSON.parse(cleanJson);
-                } catch (e) {
-                    characters = resultRaw.split(',').map(s => s.trim());
-                }
-
-                if (characters.length === 0 || !Array.isArray(characters)) {
-                    // Fallback kalau JSON gagal total
-                    alert("Gagal deteksi nama. Coba manual aja nanti.");
-                    characters = ["Tokoh Utama"]; 
-                }
-
+            if (!characters || characters.length === 0) {
+                alert("AI tidak menemukan karakter. Coba edit cerita manual.");
+            } else {
                 STATE.setCharactersList(characters);
                 renderTags(characters);
-
+                
+                // Sukses
                 btnAnalyze.classList.add('hidden');
                 btnNext.classList.remove('hidden');
                 tagsContainer.classList.remove('hidden');
-
-            } catch (err) {
-                alert("Error: " + err.message);
-            } finally {
-                btnAnalyze.innerHTML = originalText;
-                btnAnalyze.disabled = false;
             }
-        };
-    }
 
-    function renderTags(names) {
-        tagsList.innerHTML = "";
-        names.forEach(name => {
-            const tag = document.createElement('div');
-            tag.className = "bg-accent/20 text-accent border border-accent/30 px-3 py-1 rounded-full text-sm font-medium animate-fade-in flex items-center gap-2";
-            tag.innerHTML = `<i class="ph ph-user"></i> ${name}`;
-            tagsList.appendChild(tag);
-        });
-    }
-};
+        } catch (err) {
+            alert("Error: " + err.message);
+        } finally {
+            btnAnalyze.innerHTML = originalText;
+            btnAnalyze.disabled = false;
+        }
+    };
