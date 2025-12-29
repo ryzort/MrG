@@ -80,55 +80,64 @@ window.setupTab1 = function() {
         }
     }
 
-    // 3. LOGIC GENERATE (SAMA KAYAK SEBELUMNYA)
+    // 3. LOGIC GENERATE (VERSI ANTI RATE LIMIT)
     if (btnAnalyze) {
         btnAnalyze.onclick = async () => {
             const concept = storyInput.value.trim();
             if (!concept) return alert("Isi konsep cerita dulu bro!");
 
-            // Simpan state dialog terakhir sebelum kirim
             STATE.updateStory(concept, isDialogOn);
 
             const originalText = btnAnalyze.innerHTML;
-            btnAnalyze.innerHTML = `<i class="ph ph-spinner animate-spin text-xl"></i> <span>Menulis Cerita (Claude)...</span>`;
+            // Loading Cuma Sekali
+            btnAnalyze.innerHTML = `<i class="ph ph-spinner animate-spin text-xl"></i> <span>Menulis & Analisa (One-Shot)...</span>`;
             btnAnalyze.disabled = true;
 
             try {
-                // TAHAP 1: Generate Cerita
-                const fullStory = await generateStoryAI(concept, isDialogOn);
+                // PANGGIL FUNGSI BARU (1 Request doang)
+                const result = await generateStoryAndChars(concept, isDialogOn);
                 
+                // Pisahkan Hasil
+                const fullStory = result.story;
+                const characters = result.characters;
+
+                // 1. Tampilkan Cerita
                 finalStoryText.innerText = fullStory;
                 resultArea.classList.remove('hidden');
                 
-                btnAnalyze.innerHTML = `<i class="ph ph-spinner animate-spin text-xl"></i> <span>Mendeteksi Karakter...</span>`;
-
-                // TAHAP 2: Extract Karakter
-                const characters = await extractCharactersAI(fullStory);
-
+                // 2. Tampilkan Karakter
                 if (!characters || characters.length === 0) {
-                    alert("Cerita jadi, tapi karakter tidak terdeteksi.");
+                    // Kalau AI lupa bikin JSON, kita kasih opsi manual atau warning
+                    renderTags([{name: "Manual", visual: "Please add characters manually"}]); 
+                    alert("Cerita jadi, tapi AI lupa format karakter. Coba generate lagi atau lanjut aja.");
                 } else {
                     renderTags(characters);
                 }
 
-                // SIMPAN SEMUA
+                // SIMPAN KE DATABASE
                 STATE.data.story.text = concept;
                 STATE.data.story.generatedText = fullStory;
                 STATE.data.story.characters = characters;
-                STATE.data.story.useDialog = isDialogOn; // Pastikan kesimpen
+                STATE.data.story.useDialog = isDialogOn;
                 STATE.save();
 
+                // Selesai
                 btnAnalyze.classList.add('hidden');
                 btnNext.classList.remove('hidden');
 
             } catch (err) {
                 console.error(err);
-                alert("Error: " + err.message);
+                // Handle Error Rate Limit Spesifik
+                if(err.message.includes("429")) {
+                    alert("Server lagi sibuk (Rate Limit). Tunggu 10 detik lalu coba lagi.");
+                } else {
+                    alert("Error: " + err.message);
+                }
                 btnAnalyze.innerHTML = originalText;
                 btnAnalyze.disabled = false;
             }
         };
-    }
+}
 
     function renderTags(characters) {
         tagsList.innerHTML = "";
