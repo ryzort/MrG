@@ -1,58 +1,104 @@
-<div class="animate-fade-in max-w-4xl mx-auto space-y-6">
+<div class="animate-fade-in max-w-4xl mx-auto space-y-6 pb-10">
     <div class="flex items-center gap-3 mb-2">
         <h2 class="text-2xl font-bold text-white">Visual Style</h2>
         <span class="px-2 py-0.5 rounded text-[10px] bg-accent/20 text-accent border border-accent/20">Config Phase</span>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- KIRI: INPUT GAMBAR -->
-        <div class="glass-panel p-6 rounded-2xl">
+        
+        <!-- KOLOM KIRI: INPUT & PREVIEW -->
+        <div class="glass-panel p-6 rounded-2xl flex flex-col h-full">
             <label class="block text-accent text-xs font-bold mb-4 uppercase tracking-wider">
                 1. Referensi Gambar (Source)
             </label>
-            <div class="space-y-4">
-                <div class="relative border-2 border-dashed border-white/10 hover:border-accent/50 rounded-xl p-6 text-center transition-colors group cursor-pointer">
-                    <input type="file" id="style-file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+            
+            <!-- Area Upload / Preview -->
+            <div id="upload-area" class="relative border-2 border-dashed border-white/10 hover:border-accent/50 rounded-xl bg-black/20 transition-all group cursor-pointer h-48 flex flex-col items-center justify-center overflow-hidden">
+                
+                <!-- Input File Tersembunyi -->
+                <input type="file" id="style-file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
+                
+                <!-- Tampilan Default (Icon) -->
+                <div id="upload-placeholder" class="text-center p-4 transition-opacity duration-300">
                     <i class="ph ph-upload-simple text-3xl text-gray-500 group-hover:text-accent mb-2"></i>
-                    <p class="text-xs text-gray-400">Klik untuk upload file</p>
+                    <p class="text-xs text-gray-400">Klik pilih file gambar</p>
                 </div>
-                <div class="text-center text-[10px] text-gray-600 font-bold">- ATAU -</div>
-                <input type="text" id="style-url" placeholder="Paste Link Gambar (https://...)" class="input-dark w-full rounded-lg px-4 py-3 text-sm">
+
+                <!-- Tampilan Preview (Gambar) -->
+                <img id="image-preview" src="" class="absolute inset-0 w-full h-full object-cover hidden z-10 transition-opacity">
             </div>
+
+            <!-- Input URL -->
+            <div class="mt-4 flex items-center gap-2">
+                <div class="text-[10px] text-gray-500 font-bold whitespace-nowrap">ATAU LINK:</div>
+                <input type="text" id="style-url" placeholder="https://..." 
+                    class="input-dark w-full rounded-lg px-3 py-2 text-xs">
+            </div>
+
             <button id="btn-upload-style" class="w-full mt-4 bg-white/5 hover:bg-white/10 text-white py-2.5 rounded-lg transition-all text-xs font-bold border border-white/10 flex justify-center items-center gap-2">
-                <i class="ph ph-scan"></i> Upload & Analisa Style
+                <i class="ph ph-scan"></i> Analisa Style
             </button>
+            
             <p id="style-status" class="text-[10px] text-gray-500 mt-3 text-center min-h-[1.5em]"></p>
         </div>
 
-        <!-- KANAN: CONFIG & TOGGLE -->
+        <!-- KOLOM KANAN: CONFIG -->
         <div class="space-y-4">
+            
+            <!-- ASPECT RATIO SELECTOR (BARU) -->
+            <div class="glass-panel p-5 rounded-2xl">
+                <label class="block text-white text-xs font-bold mb-3 uppercase tracking-wider">
+                    <i class="ph ph-frame-corners text-accent"></i> Aspect Ratio
+                </label>
+                <div class="grid grid-cols-3 gap-2">
+                    <!-- Ratio 1:1 -->
+                    <button onclick="selectRatio('1:1')" id="ratio-square" class="ratio-btn active bg-accent/20 border border-accent text-white py-2 rounded-lg text-xs font-bold hover:bg-accent/30 transition-all">
+                        1:1 (Kotak)
+                    </button>
+                    <!-- Ratio 16:9 -->
+                    <button onclick="selectRatio('16:9')" id="ratio-landscape" class="ratio-btn bg-black/30 border border-white/10 text-gray-400 py-2 rounded-lg text-xs font-bold hover:bg-white/5 transition-all">
+                        16:9 (Youtube)
+                    </button>
+                    <!-- Ratio 9:16 -->
+                    <button onclick="selectRatio('9:16')" id="ratio-portrait" class="ratio-btn bg-black/30 border border-white/10 text-gray-400 py-2 rounded-lg text-xs font-bold hover:bg-white/5 transition-all">
+                        9:16 (Shorts)
+                    </button>
+                </div>
+            </div>
+
+            <!-- TOGGLE QUALITY -->
             <div class="glass-panel p-5 rounded-2xl flex justify-between items-center">
                 <div>
                     <h3 class="text-white font-bold text-sm flex items-center gap-2">
                         <i class="ph ph-crown text-yellow-500"></i> Pro Quality (4K)
                     </h3>
-                    <p class="text-[10px] text-gray-400 mt-0.5">Model: seedream-pro (Detail Tinggi)</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">Model: seedream-pro</p>
                 </div>
+                
                 <label class="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" id="toggle-quality" class="sr-only peer" checked> 
                     <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                 </label>
             </div>
-            <div class="glass-panel p-5 rounded-2xl h-full">
+
+            <!-- MASTER PROMPT -->
+            <div class="glass-panel p-5 rounded-2xl">
                 <label class="block text-accent text-xs font-bold mb-2 uppercase tracking-wider">
-                    2. Master Style Prompt
+                    Master Style Prompt
                 </label>
-                <textarea id="master-prompt" rows="6" class="input-dark w-full h-32 rounded-lg p-3 text-xs leading-relaxed resize-none" placeholder="Deskripsi style hasil analisa AI akan muncul di sini..."></textarea>
+                <textarea id="master-prompt" rows="4" 
+                    class="input-dark w-full rounded-lg p-3 text-xs leading-relaxed resize-none"
+                    placeholder="Deskripsi style akan muncul di sini..."></textarea>
             </div>
         </div>
     </div>
 
-    <!-- BUTTON NEXT -->
-    <div class="flex justify-end pt-4">
-        <button onclick="saveStyleAndNext()" class="btn-neon px-8 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:shadow-accent/20">
+    <!-- BUTTON NEXT (FIXED POSITION) -->
+    <!-- z-50 dan relative biar gak ketimpa layer lain -->
+    <div class="flex justify-end pt-4 pb-8 relative z-50">
+        <button onclick="saveStyleAndNext()" class="btn-neon px-8 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:shadow-accent/20 cursor-pointer">
             <span>Simpan & Lanjut ke Karakter</span>
             <i class="ph ph-arrow-right"></i>
         </button>
     </div>
-</div>
+                        </div>
