@@ -13,75 +13,85 @@ window.setupTab2 = function() {
     const fileInput = document.getElementById('style-file');
     const urlInput = document.getElementById('style-url');
 
-    // Safety check
+    // Safety check: Kalau elemen gak ada, stop
     if(!masterPrompt) return;
 
-    // --- 1. LOAD DATA LAMA ---
-    // Balikin prompt style yang udah disave
+    // --- 1. LOAD DATA LAMA (State Management) ---
+    // Kalau user balik dari Tab 3, isiannya jangan ilang
     masterPrompt.value = STATE.data.style.artPrompt || "";
-    // Balikin posisi toggle quality
     if(toggleQuality) toggleQuality.checked = STATE.data.style.isProQuality;
+    if(STATE.data.style.refImage) {
+        urlInput.value = STATE.data.style.refImage;
+        statusTxt.innerText = "✅ Gambar sebelumnya tersimpan.";
+        statusTxt.className = "text-[10px] text-green-400 mt-3 text-center";
+    }
 
-    // --- 2. LOGIC UPLOAD & ANALISA ---
+    // --- 2. LOGIC TOMBOL UPLOAD & ANALISA ---
     if (btnUpload) {
         btnUpload.onclick = async () => {
             let imageUrl = urlInput.value.trim();
             const hasFile = fileInput.files.length > 0;
 
             if (!imageUrl && !hasFile) {
-                return alert("Pilih file gambar atau tempel link dulu bro!");
+                return alert("Pilih file gambar dulu atau paste link-nya bro!");
             }
 
-            // UI Loading
+            // UI Loading (Biar user tau lagi mikir)
+            const originalBtnText = btnUpload.innerHTML;
             btnUpload.disabled = true;
             btnUpload.innerHTML = `<i class="ph ph-spinner animate-spin"></i> Processing...`;
-            statusTxt.className = "text-xs text-accent mt-2 text-center animate-pulse";
-            statusTxt.innerText = "⏳ Memproses data...";
+            statusTxt.className = "text-[10px] text-accent mt-3 text-center animate-pulse";
             
             try {
                 // A. Kalau Upload File -> Kirim ke ImgBB
                 if (hasFile) {
-                    statusTxt.innerText = "⏳ Mengupload ke Server ImgBB...";
+                    statusTxt.innerText = "⏳ Sedang mengupload ke ImgBB...";
                     // Panggil fungsi upload dari api.js
                     imageUrl = await uploadToImgBB(fileInput.files[0]);
-                    urlInput.value = imageUrl; // Tampilkan URL hasil upload biar user tau
+                    urlInput.value = imageUrl; // Tampilkan URL hasil upload
                 }
 
                 // B. Analisa Style via AI
                 statusTxt.innerText = "👁️ AI sedang menganalisa visual style...";
                 
                 // Prompt khusus buat nyuri style gambar
-                const prompt = `Describe the art style, visual vibe, lighting, and rendering technique of this image in one concise sentence suitable for image generation prompts. Image URL: ${imageUrl}`;
+                const prompt = `Describe the art style, lighting, color palette, and rendering technique of the image at this URL: "${imageUrl}". 
+                Output ONE concise paragraph suitable for an image generation prompt. Focus only on visual style.`;
                 
-                // Panggil AI (Logic Lu: OpenAI/Claude)
-                // Karena callAI lu support prompt text biasa, kita pake model 'logic' (OpenAI)
+                // Panggil AI (Logic Lu: OpenAI)
                 const styleDesc = await callAI(CONFIG.AI_MODELS.logic, prompt);
 
-                // Bersihin hasil (remove quotes/markdown)
+                // Bersihin hasil
                 const cleanStyle = styleDesc.replace(/```/g, '').replace(/"/g, '').trim();
                 
                 masterPrompt.value = cleanStyle;
                 STATE.data.style.refImage = imageUrl;
                 
-                statusTxt.className = "text-xs text-green-400 mt-2 text-center font-bold";
+                // UI Sukses
+                statusTxt.className = "text-[10px] text-green-400 mt-3 text-center font-bold";
                 statusTxt.innerHTML = `<i class="ph ph-check-circle"></i> Style Berhasil Dikunci!`;
 
             } catch (err) {
                 console.error(err);
-                statusTxt.className = "text-xs text-red-400 mt-2 text-center";
+                statusTxt.className = "text-[10px] text-red-400 mt-3 text-center";
                 statusTxt.innerText = "❌ Error: " + err.message;
             } finally {
+                // Balikin Tombol
                 btnUpload.disabled = false;
-                btnUpload.innerHTML = "Upload & Analisa Style";
+                btnUpload.innerHTML = originalBtnText;
             }
         };
     }
 
     // --- 3. LOGIC TOMBOL NEXT (GLOBAL) ---
-    // Fungsi ini dipanggil langsung dari onclick HTML
+    // Fungsi ini dipanggil dari onclick HTML "Simpan & Lanjut"
     window.saveStyleAndNext = function() {
         const prompt = masterPrompt.value.trim();
-        if (!prompt) return alert("Style belum ada bro! Upload gambar atau tulis manual.");
+        // Kalau kosong, ingetin user
+        if (!prompt) {
+            const proceed = confirm("Style Prompt masih kosong. AI bakal pake style default. Yakin lanjut?");
+            if (!proceed) return;
+        }
 
         const isPro = toggleQuality.checked;
         
@@ -91,11 +101,6 @@ window.setupTab2 = function() {
         console.log("Style Saved:", { prompt, isPro });
         
         // Pindah ke Tab 3 (Character)
-        // Pastikan switchTab function ada (dari main.js)
-        if(typeof switchTab === 'function') {
-            switchTab(3);
-        } else {
-            alert("Fungsi navigasi error. Refresh halaman.");
-        }
+        switchTab(3);
     };
 };
