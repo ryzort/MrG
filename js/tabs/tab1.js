@@ -106,19 +106,22 @@ window.setupTab1 = function() {
         };
     }
 
-    function renderTags(names) {
+    function renderTags(characters) {
         tagsList.innerHTML = "";
-        names.forEach(name => {
+        characters.forEach(char => {
+            // Handle kalau data lama masih String, atau data baru Object
+            const name = typeof char === 'string' ? char : char.name;
+            const desc = typeof char === 'string' ? '' : char.visual;
+            
             const tag = document.createElement('div');
-            tag.className = "bg-accent/10 text-accent border border-accent/20 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 animate-fade-in";
+            tag.className = "bg-accent/10 text-accent border border-accent/20 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 animate-fade-in group relative cursor-help";
             tag.innerHTML = `<i class="ph ph-user"></i> ${name}`;
+            
+            // Tooltip deskripsi fisik pas di-hover
+            if(desc) {
+                tag.title = desc; // Simpel tooltip
+            }
+            
             tagsList.appendChild(tag);
         });
     }
-
-    // Global helper buat copy text
-    window.copyStory = function() {
-        navigator.clipboard.writeText(finalStoryText.innerText);
-        alert("Cerita berhasil disalin!");
-    }
-};
