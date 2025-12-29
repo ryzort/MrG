@@ -108,31 +108,26 @@ body {
 }
 
 /* Style Tombol Tab */
+/* TIMPA BAGIAN NAVIGASI DI STYLE.CSS */
 .tab-btn {
-    flex: none; /* PENTING: Biar gak gepeng */
-    white-space: nowrap; /* PENTING: Teks satu baris */
-    padding: 10px 20px;
-    border-radius: 12px;
-    font-size: 0.85rem;
+    flex: none; 
+    display: inline-block; /* Paksa biar gak gepeng */
+    padding: 10px 24px;   /* Gedein padding */
+    border-radius: 99px;  /* Bikin Pill Shape (Bulat lonjong) */
+    font-size: 0.9rem;
     font-weight: 600;
-    color: var(--text-muted);
-    background: transparent;
-    border: 1px solid transparent;
+    color: #9ca3af;
+    background: rgba(255,255,255,0.05); /* Kasih background tipis */
+    border: 1px solid rgba(255,255,255,0.1); /* Kasih border tipis */
+    margin-right: 8px; /* Kasih jarak antar tombol */
     transition: all 0.3s ease;
-    cursor: pointer;
 }
 
-.tab-btn:hover {
-    color: white;
-    background: rgba(255, 255, 255, 0.05);
-}
-
-/* Tab Aktif (Ungu Glow) */
 .tab-btn.active {
-    background: rgba(99, 102, 241, 0.15);
-    color: var(--accent);
-    border-color: rgba(99, 102, 241, 0.3);
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
+    background: #6366f1; /* Warna Ungu Penuh */
+    color: white;
+    border-color: #6366f1;
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
 }
 
 /* =========================================
