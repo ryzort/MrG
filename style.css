@@ -1,61 +1,109 @@
-/* Background Pattern Abstrak */
+/* IMPORT FONT KEREN (Inter) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+:root {
+    --bg-dark: #050505;
+    --card-bg: rgba(30, 30, 36, 0.7); /* Transparan dikit */
+    --accent: #6366f1; /* Ungu Neon */
+    --accent-glow: rgba(99, 102, 241, 0.4);
+    --text-main: #ffffff;
+    --text-muted: #9ca3af;
+    --border: rgba(255, 255, 255, 0.08);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    overflow-x: hidden;
+}
+
+/* --- 1. BACKGROUND ARTISTIK (ANIMATED) --- */
+/* Bikin efek corak nebula/aurora yang gerak pelan di belakang */
 .bg-pattern {
-    background-image: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 20%),
-                      radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 20%);
-    background-color: #0f0f13;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: -1;
+    background: 
+        radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.15), transparent 25%);
+    filter: blur(40px);
+    animation: pulseBg 10s infinite alternate;
 }
 
-/* Tab Button Styles */
-.tab-btn {
-    flex: 1;
-    padding: 10px 16px;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    color: #9ca3af;
-    border: 1px solid transparent;
-    white-space: nowrap;
+/* Grid halus biar kesan Tech */
+.bg-grid {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: -1;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.2;
+    mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
 }
 
-.tab-btn:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: white;
+@keyframes pulseBg {
+    0% { opacity: 0.5; transform: scale(1); }
+    100% { opacity: 0.8; transform: scale(1.1); }
 }
 
-.tab-btn.active {
+/* --- 2. GLASSMORPHISM CARD (Panel Kaca) --- */
+.glass-panel {
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* --- 3. NEON BUTTONS --- */
+.btn-neon {
     background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-    border-color: rgba(255, 255, 255, 0.1);
-    transform: translateY(-1px);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 0 15px var(--accent-glow);
+    transition: all 0.3s ease;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-}
-::-webkit-scrollbar-track {
-    background: #0f0f13;
-}
-::-webkit-scrollbar-thumb {
-    background: #333;
-    border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #555;
+.btn-neon:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.6);
+    filter: brightness(1.1);
 }
 
-/* Animations */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+.btn-neon:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    filter: grayscale(0.8);
 }
+
+/* --- 4. INPUT FIELDS --- */
+.input-dark {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    color: white;
+    transition: all 0.3s;
+}
+
+.input-dark:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+    outline: none;
+}
+
+/* --- 5. ANIMATIONS --- */
 .animate-fade-in {
     animation: fadeIn 0.5s ease-out forwards;
 }
 
-/* Transisi Content */
-#app-content {
-    transition: opacity 0.3s ease-in-out;
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
+
+/* Scrollbar Keren */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-dark); }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
