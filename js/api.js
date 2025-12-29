@@ -110,31 +110,33 @@ async function generateStoryAI(topic, useDialog) {
     return await callAI(CONFIG.AI_MODELS.story, prompt);
 }
 
-// 2. EXTRACT CHARACTERS (OpenAI + JSON Mode)
+// ... kode callAI sebelumnya tetap sama ...
+
+// 2. EXTRACT CHARACTERS (UPGRADE: NAME + VISUAL)
 async function extractCharactersAI(storyText) {
-    const prompt = `List tokoh utama dari cerita ini. Output hanya sebuah JSON array of strings. Contoh: ["Jono", "Siti"]. Jangan ada penjelasan lain. Cerita:\n${storyText}`;
+    // Prompt kita pertajam: Minta JSON Object dengan properti 'name' dan 'visual'
+    const prompt = `Analisa cerita berikut. Identifikasi tokoh utama.
+    Output HANYA JSON Array of Objects. 
+    Format: [{"name": "Nama Tokoh", "visual": "Deskripsi fisik visual singkat padat untuk prompt gambar AI (baju, rambut, wajah), max 20 kata per tokoh, bahasa Inggris"}].
     
-    // Panggil model logic (OpenAI)
+    Jangan ada penjelasan lain. Cerita:\n${storyText}`;
+    
+    // Panggil model logic
     const raw = await callAI(CONFIG.AI_MODELS.logic, prompt, true);
     
-    // Parsing Logic yang Robust
     try {
         return JSON.parse(raw);
     } catch (e) {
         console.warn("JSON Parse gagal, mencoba Regex Match...", e);
-        // Fallback: Cari kurung siku []
         const m = raw.match(/\[([\s\S]*?)\]/);
         if (m) {
-            try {
-                return JSON.parse(m[0]);
-            } catch (e2) {
-                console.error("Regex parse gagal juga.");
-                return [];
-            }
+            try { return JSON.parse(m[0]); } catch (e2) { return []; }
         }
         return []; 
     }
 }
+
+// ... sisa file tetap sama ...
 
 // 3. UPLOAD TO IMGBB
 async function uploadToImgBB(file) {
