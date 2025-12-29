@@ -1,24 +1,19 @@
 const CONFIG = {
-    // Fungsi buat ngambil Key dari LocalStorage
+    // Ambil Key dari LocalStorage (Fitur Settings yang tadi)
     getImgBBKey: () => localStorage.getItem('mrg_imgbb_key') || "",
     getPollinationsKey: () => localStorage.getItem('mrg_polli_key') || "",
 
-    // Cek apakah user udah set key
-    isConfigured: () => {
-        return localStorage.getItem('mrg_imgbb_key') !== null;
-    },
-
-    // Settingan Model AI (Tetap disini karena aman publik)
+    // DAFTAR MODEL (Sesuai Screenshot & Doc lu)
+    // Lu bisa ganti nama model ini sesuai list di: https://gen.pollinations.ai/v1/models
     AI_MODELS: {
-        story: "openai",          
-        vision: "gemini",         // Support Vision
-        json: "qwen-coder",       
-        image: "flux"             
+        story: "openai",          // Model cerdas buat nulis cerita
+        vision: "gemini",         // Model yang punya logo "Mata" (Vision)
+        json: "qwen-coder",       // Model jago koding/struktur data
+        image: "flux",            // Model gambar paling bagus saat ini
+        video_prompt: "mistral"   // Model buat bikin prompt video (opsional)
     },
 
     ERRORS: {
-        network: "Koneksi bermasalah. Cek internet lu bro.",
-        api: "AI lagi pusing (API Error). Cek API Key atau coba lagi.",
-        missingKey: "Woy bro! API Key belum diisi. Klik tombol Gear ⚙️ di atas dulu."
+        missingKey: "API Key belum diisi bro! Klik tombol Gear ⚙️ di pojok kanan atas."
     }
 };
