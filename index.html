@@ -13,8 +13,8 @@
             theme: {
                 extend: {
                     colors: {
-                        darkbg: '#0f0f13', // Warna background gelap spesial
-                        accent: '#6366f1', // Warna ungu neon
+                        darkbg: '#0f0f13', 
+                        accent: '#6366f1', 
                         cardbg: '#1e1e24'
                     }
                 }
@@ -24,28 +24,21 @@
 
     <!-- Custom Style -->
     <link rel="stylesheet" href="style.css">
-    <!-- Icon Library (Phosphor Icons - Ringan & Keren) -->
+    <!-- Icon Library -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body class="bg-darkbg text-white min-h-screen font-sans overflow-x-hidden selection:bg-accent selection:text-white">
 
-    <!-- BACKGROUND ANIMATION (Abstrak) -->
+    <!-- BACKGROUND ANIMATION -->
     <div class="fixed inset-0 z-[-1] opacity-20 pointer-events-none bg-pattern"></div>
 
     <div class="container mx-auto px-4 py-6 max-w-6xl">
-
-        <!-- Tombol Settings -->
-<button onclick="toggleSettings()" class="p-2 rounded-full hover:bg-white/10 transition-colors border border-white/10 group relative">
-    <i class="ph ph-gear text-2xl text-gray-400 group-hover:text-accent transition-colors"></i>
-    <!-- Titik Merah kalau Key belum diset -->
-    <span id="settings-alert" class="hidden absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
-</button>
         
-        <!-- HEADER -->
+        <!-- HEADER (Logo Kiri, Settings Kanan) -->
         <header class="flex items-center justify-between mb-8 animate-fade-in">
+            <!-- KIRI: Logo & Judul -->
             <div class="flex items-center gap-4">
                 <div class="relative w-12 h-12 rounded-full overflow-hidden border-2 border-accent shadow-[0_0_15px_rgba(99,102,241,0.5)]">
-                    <!-- LOGO LU DISINI -->
                     <img src="logo.png" alt="MrG Logo" class="object-cover w-full h-full">
                 </div>
                 <div>
@@ -54,15 +47,25 @@
                 </div>
             </div>
             
-            <!-- Indikator Status (Opsional) -->
-            <div id="status-indicator" class="px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-xs border border-green-500/20 flex items-center gap-2">
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                System Ready
+            <!-- KANAN: Status & Settings -->
+            <div class="flex items-center gap-4">
+                <!-- Indikator Status -->
+                <div id="status-indicator" class="hidden md:flex px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-xs border border-green-500/20 items-center gap-2">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    System Ready
+                </div>
+
+                <!-- TOMBOL SETTINGS (Disini posisinya yang bener) -->
+                <button onclick="toggleSettings()" class="p-2 rounded-full hover:bg-white/10 transition-colors border border-white/10 group relative z-50">
+                    <i class="ph ph-gear text-2xl text-gray-400 group-hover:text-accent transition-colors"></i>
+                    <!-- Titik Merah -->
+                    <span id="settings-alert" class="hidden absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+                </button>
             </div>
         </header>
 
         <!-- NAVIGATION TABS -->
-        <nav class="flex flex-wrap gap-2 mb-6 p-2 bg-cardbg/50 rounded-xl backdrop-blur-md border border-white/5 sticky top-2 z-50 shadow-lg">
+        <nav class="flex flex-wrap gap-2 mb-6 p-2 bg-cardbg/50 rounded-xl backdrop-blur-md border border-white/5 sticky top-2 z-40 shadow-lg">
             <button onclick="switchTab(1)" id="btn-tab-1" class="tab-btn active">1. Story Concept</button>
             <button onclick="switchTab(2)" id="btn-tab-2" class="tab-btn">2. Style & Config</button>
             <button onclick="switchTab(3)" id="btn-tab-3" class="tab-btn">3. Characters</button>
@@ -70,14 +73,47 @@
             <button onclick="switchTab(5)" id="btn-tab-5" class="tab-btn">5. Video Output</button>
         </nav>
 
-        <!-- CONTENT AREA (Dinamic Load) -->
-        <main id="app-content" class="min-h-[60vh] relative">
-            <!-- Isi tab bakal masuk sini lewat Javascript -->
+        <!-- CONTENT AREA -->
+        <main id="app-content" class="min-h-[60vh] relative z-0">
             <div class="text-center py-20 text-gray-500 animate-pulse">
                 Memuat Interface...
             </div>
         </main>
 
+    </div>
+
+    <!-- MODAL SETTINGS (Wajib sebelum Script) -->
+    <div id="settings-modal" class="fixed inset-0 z-[100] hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="toggleSettings()"></div>
+        
+        <!-- Content -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#1e1e24] border border-white/10 rounded-2xl p-6 shadow-2xl transform transition-all scale-100">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i class="ph ph-lock-key text-accent"></i> API Configuration
+                </h2>
+                <button onclick="toggleSettings()" class="text-gray-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1">ImgBB API Key (Wajib)</label>
+                    <input type="password" id="input-imgbb-key" placeholder="Paste key ImgBB lu disini..." 
+                        class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-accent transition-colors">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1">Pollinations Key (Opsional)</label>
+                    <input type="password" id="input-polli-key" placeholder="Kosongin aja kalau mau gratisan..." 
+                        class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-accent transition-colors">
+                </div>
+
+                <button onclick="saveSettings()" class="w-full bg-accent hover:bg-indigo-500 text-white font-medium py-3 rounded-lg transition-all shadow-[0_0_15px_rgba(99,102,241,0.3)] mt-2">
+                    Simpan Konfigurasi
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- SCRIPTS -->
@@ -86,43 +122,5 @@
     <script src="js/state.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/main.js"></script>
-    
-    <!-- MODAL SETTINGS (Hidden by default) -->
-<div id="settings-modal" class="fixed inset-0 z-[100] hidden">
-    <!-- Backdrop Blur -->
-    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="toggleSettings()"></div>
-    
-    <!-- Content -->
-    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#1e1e24] border border-white/10 rounded-2xl p-6 shadow-2xl transform transition-all scale-100">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                <i class="ph ph-lock-key text-accent"></i> API Configuration
-            </h2>
-            <button onclick="toggleSettings()" class="text-gray-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
-        </div>
-
-        <div class="space-y-4">
-            <!-- ImgBB Input -->
-            <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1">ImgBB API Key (Wajib buat Upload)</label>
-                <input type="password" id="input-imgbb-key" placeholder="Paste key ImgBB lu disini..." 
-                    class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-accent transition-colors">
-            </div>
-
-            <!-- Pollinations Toggle (Opsional klo mau private) -->
-            <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1">Pollinations Key (Opsional)</label>
-                <input type="password" id="input-polli-key" placeholder="Kosongin aja kalau mau gratisan..." 
-                    class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-accent transition-colors">
-                <p class="text-[10px] text-gray-500 mt-1">*Key disimpan aman di browser lu (LocalStorage).</p>
-            </div>
-
-            <button onclick="saveSettings()" class="w-full bg-accent hover:bg-indigo-500 text-white font-medium py-3 rounded-lg transition-all shadow-[0_0_15px_rgba(99,102,241,0.3)] mt-2">
-                Simpan Konfigurasi
-            </button>
-        </div>
-    </div>
-</div>
 </body>
-              </html>
-
+</html>
