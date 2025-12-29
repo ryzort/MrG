@@ -1,49 +1,67 @@
-// MODAL & SETTINGS LOGIC
-const modal = document.getElementById('settings-modal');
-const alertDot = document.getElementById('settings-alert');
-const inputImgbb = document.getElementById('input-imgbb-key');
-const inputPolli = document.getElementById('input-polli-key');
+// ==========================================
+// GLOBAL SETTINGS (MODAL)
+// ==========================================
 
-// Load saved keys pas web dibuka
-document.addEventListener('DOMContentLoaded', () => {
-    inputImgbb.value = CONFIG.getImgBBKey();
-    inputPolli.value = CONFIG.getPollinationsKey();
-    
-    // Cek kalo kosong kasih peringatan merah
-    if (!CONFIG.getImgBBKey()) {
-        alertDot.classList.remove('hidden');
-    }
-});
-
+// Fungsi dipanggil dari HTML (onclick)
 function toggleSettings() {
-    modal.classList.toggle('hidden');
+    const modal = document.getElementById('settings-modal');
+    if (modal) {
+        modal.classList.toggle('hidden');
+    } else {
+        console.error("Modal Settings gak ketemu! Cek index.html lu bro.");
+    }
 }
 
 function saveSettings() {
+    const inputImgbb = document.getElementById('input-imgbb-key');
+    const inputPolli = document.getElementById('input-polli-key');
+    const alertDot = document.getElementById('settings-alert');
+    const modal = document.getElementById('settings-modal');
+
     const imgbb = inputImgbb.value.trim();
     const polli = inputPolli.value.trim();
 
     if (!imgbb) {
-        alert("ImgBB Key wajib diisi bro buat upload gambar!");
+        alert("ImgBB Key wajib diisi buat upload gambar nanti!");
         return;
     }
 
     localStorage.setItem('mrg_imgbb_key', imgbb);
     localStorage.setItem('mrg_polli_key', polli);
     
-    alertDot.classList.add('hidden');
-    toggleSettings();
+    if (alertDot) alertDot.classList.add('hidden');
+    if (modal) modal.classList.add('hidden'); // Tutup modal
+    
     alert("Mantap! API Key berhasil disimpan.");
     
-    // Refresh halaman biar config ngebaca ulang (opsional)
-    // location.reload(); 
+    // Refresh halaman biar config ngebaca ulang
+    setTimeout(() => location.reload(), 500); 
+}
+
+// Pas halaman siap, load isi inputan
+document.addEventListener('DOMContentLoaded', () => {
+    const inputImgbb = document.getElementById('input-imgbb-key');
+    const inputPolli = document.getElementById('input-polli-key');
+    const alertDot = document.getElementById('settings-alert');
+
+    // Load data dari LocalStorage
+    if (inputImgbb) inputImgbb.value = CONFIG.getImgBBKey();
+    if (inputPolli) inputPolli.value = CONFIG.getPollinationsKey();
+    
+    // Cek dot merah
+    if (!CONFIG.getImgBBKey() && alertDot) {
+        alertDot.classList.remove('hidden');
     }
+});
+
 
 // ==========================================
 // LOGIC TAB 1: STORY & EXTRACTION
 // ==========================================
 
 window.setupTab1 = function() {
+    console.log("Setup Tab 1 dimulai..."); // Debug
+
     const storyInput = document.getElementById('story-input');
     const toggleBtn = document.getElementById('toggle-dialog');
     const toggleCircle = document.getElementById('toggle-circle');
@@ -53,23 +71,27 @@ window.setupTab1 = function() {
     const tagsContainer = document.getElementById('char-tags-container');
     const tagsList = document.getElementById('tags-list');
 
-    // 1. Load Data Lama (Kalau user balik dari tab lain)
+    // Cek elemen ada gak
+    if (!toggleBtn || !storyInput) {
+        console.error("Elemen Tab 1 belum ke-load sempurna.");
+        return;
+    }
+
+    // 1. Load Data Lama
     const savedData = STATE.data.story;
     storyInput.value = savedData.text || "";
     
-    // Set status toggle sesuai data simpanan
     let isDialogOn = savedData.useDialog;
     updateToggleUI(isDialogOn);
 
-    // Kalau karakter udah ada sebelumnya, tampilin
     if (savedData.characters.length > 0) {
         renderTags(savedData.characters);
-        btnAnalyze.classList.add('hidden'); // Sembunyiin tombol generate
-        btnNext.classList.remove('hidden'); // Munculin tombol next
-        tagsContainer.classList.remove('hidden');
+        if(btnAnalyze) btnAnalyze.classList.add('hidden');
+        if(btnNext) btnNext.classList.remove('hidden');
+        if(tagsContainer) tagsContainer.classList.remove('hidden');
     }
 
-    // 2. Event Listener: Toggle Dialog
+    // 2. Logic Toggle
     toggleBtn.onclick = () => {
         isDialogOn = !isDialogOn;
         updateToggleUI(isDialogOn);
@@ -90,74 +112,66 @@ window.setupTab1 = function() {
         }
     }
 
-    // 3. Event Listener: Tombol Analisa (Generate)
-    btnAnalyze.onclick = async () => {
-        const text = storyInput.value.trim();
-        if (!text) {
-            alert("Tulis dulu ceritanya bro!");
-            return;
-        }
-
-        // Simpan inputan dulu
-        STATE.updateStory(text, isDialogOn);
-
-        // UI Loading effect
-        const originalText = btnAnalyze.innerHTML;
-        btnAnalyze.innerHTML = `<i class="ph ph-spinner animate-spin text-xl"></i> <span>Membaca Cerita...</span>`;
-        btnAnalyze.disabled = true;
-
-        try {
-            // PROMPT KHUSUS BUAT NERJEMAHIN CERITA JADI LIST NAMA
-            const promptMessages = [
-                {
-                    role: "system",
-                    content: "You are an assistant that extracts character names from a story. Output ONLY a JSON array of strings. Example: [\"Jono\", \"Joni\", \"Robot A\"]. If no names found, return []."
-                },
-                {
-                    role: "user",
-                    content: `Extract all character names from this story:\n\n${text}`
-                }
-            ];
-
-            // Panggil API (Logic ada di api.js)
-            const resultRaw = await generateText(promptMessages, 'json'); 
-            
-            // Parsing hasil JSON dari AI
-            let characters = [];
-            try {
-                // Bersihin format markdown ```json ... ``` kalau ada
-                const cleanJson = resultRaw.replace(/```json|```/g, '').trim();
-                characters = JSON.parse(cleanJson);
-            } catch (e) {
-                console.warn("Gagal parse JSON, coba manual split", resultRaw);
-                // Fallback kalau AI bego dikit: coba split koma
-                characters = resultRaw.split(',').map(s => s.trim());
-            }
-
-            if (characters.length === 0) {
-                alert("AI gak nemu nama karakter bro. Coba sebutin nama tokohnya di cerita.");
-                btnAnalyze.innerHTML = originalText;
-                btnAnalyze.disabled = false;
+    // 3. Logic Tombol Generate
+    if (btnAnalyze) {
+        btnAnalyze.onclick = async () => {
+            const text = storyInput.value.trim();
+            if (!text) {
+                alert("Tulis dulu ceritanya bro!");
                 return;
             }
 
-            // Sukses! Simpan ke STATE & Render
-            STATE.setCharactersList(characters);
-            renderTags(characters);
+            STATE.updateStory(text, isDialogOn);
 
-            // Ganti tombol jadi Next
-            btnAnalyze.classList.add('hidden');
-            btnNext.classList.remove('hidden');
-            tagsContainer.classList.remove('hidden');
+            const originalText = btnAnalyze.innerHTML;
+            btnAnalyze.innerHTML = `<i class="ph ph-spinner animate-spin text-xl"></i> <span>Membaca Cerita...</span>`;
+            btnAnalyze.disabled = true;
 
-        } catch (err) {
-            alert("Gagal analisa cerita: " + err.message);
-            btnAnalyze.innerHTML = originalText;
-            btnAnalyze.disabled = false;
-        }
-    };
+            try {
+                // Prompt: Extract names
+                const promptMessages = [
+                    {
+                        role: "system",
+                        content: "Extract names. Output JSON array only. Example: [\"Jono\", \"Siti\"]."
+                    },
+                    {
+                        role: "user",
+                        content: `Extract character names from: ${text}`
+                    }
+                ];
 
-    // Helper: Bikin tampilan Tag
+                const resultRaw = await generateText(promptMessages, 'json'); 
+                
+                let characters = [];
+                try {
+                    const cleanJson = resultRaw.replace(/```json|```/g, '').trim();
+                    characters = JSON.parse(cleanJson);
+                } catch (e) {
+                    characters = resultRaw.split(',').map(s => s.trim());
+                }
+
+                if (characters.length === 0 || !Array.isArray(characters)) {
+                    // Fallback kalau JSON gagal total
+                    alert("Gagal deteksi nama. Coba manual aja nanti.");
+                    characters = ["Tokoh Utama"]; 
+                }
+
+                STATE.setCharactersList(characters);
+                renderTags(characters);
+
+                btnAnalyze.classList.add('hidden');
+                btnNext.classList.remove('hidden');
+                tagsContainer.classList.remove('hidden');
+
+            } catch (err) {
+                alert("Error: " + err.message);
+            } finally {
+                btnAnalyze.innerHTML = originalText;
+                btnAnalyze.disabled = false;
+            }
+        };
+    }
+
     function renderTags(names) {
         tagsList.innerHTML = "";
         names.forEach(name => {
