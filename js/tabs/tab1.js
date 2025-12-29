@@ -8,21 +8,28 @@ window.setupTab1 = function() {
     const storyInput = document.getElementById('story-input');
     const finalStoryText = document.getElementById('final-story-text');
     const resultArea = document.getElementById('result-area');
+    
+    // Elemen Toggle
     const toggleBtn = document.getElementById('toggle-dialog');
     const toggleCircle = document.getElementById('toggle-circle');
     const dialogStatus = document.getElementById('dialog-status');
+    
     const btnAnalyze = document.getElementById('btn-analyze');
     const btnNext = document.getElementById('btn-next-tab');
     const tagsList = document.getElementById('tags-list');
 
     if (!storyInput) return;
 
-    // 1. Load Data Lama
+    // 1. LOAD DATA LAMA & STATE AWAL
     const savedData = STATE.data.story;
-    storyInput.value = savedData.text || ""; // Input kasar
-    let isDialogOn = savedData.useDialog;
+    storyInput.value = savedData.text || "";
     
-    // Kalau udah pernah generate, tampilin hasilnya
+    // Pastikan defaultnya false kalo belum ada data
+    let isDialogOn = savedData.useDialog === true; 
+    
+    // Set UI Awal (Jalanin fungsi update tampilan)
+    updateToggleUI(isDialogOn);
+
     if (savedData.generatedText) {
         finalStoryText.innerText = savedData.generatedText;
         resultArea.classList.remove('hidden');
@@ -30,70 +37,87 @@ window.setupTab1 = function() {
         btnNext.classList.remove('hidden');
         renderTags(savedData.characters);
     }
-    
-    updateToggleUI(isDialogOn);
 
-    // 2. Toggle Logic
+    // 2. LOGIC TOGGLE (YANG DIPERBAIKI)
     if(toggleBtn) {
+        // Hapus event listener lama (biar gak double) lalu pasang baru
+        toggleBtn.onclick = null; 
         toggleBtn.onclick = () => {
+            // Ubah Status True/False
             isDialogOn = !isDialogOn;
+            console.log("Toggle clicked. Status:", isDialogOn);
+            
+            // Update Tampilan & Simpan ke Database
             updateToggleUI(isDialogOn);
-            STATE.updateStory(storyInput.value, isDialogOn); // Simpan
+            STATE.updateStory(storyInput.value, isDialogOn);
         };
     }
 
+    // Fungsi Update Tampilan Toggle (Animasi)
     function updateToggleUI(isOn) {
+        if(!toggleBtn || !toggleCircle || !dialogStatus) return;
+
         if (isOn) {
-            toggleBtn.classList.replace('bg-gray-600', 'bg-accent');
-            toggleCircle.style.transform = "translateX(24px)";
+            // MODE ON: Warna Ungu, Geser Kanan
+            toggleBtn.classList.remove('bg-gray-600');
+            toggleBtn.classList.add('bg-accent');
+            
+            // Geser lingkaran 20px ke kanan
+            toggleCircle.style.transform = "translateX(20px)";
+            
             dialogStatus.innerText = "ON";
-            dialogStatus.style.color = "#6366f1";
+            dialogStatus.style.color = "#6366f1"; // Ungu Neon
         } else {
-            toggleBtn.classList.replace('bg-accent', 'bg-gray-600');
+            // MODE OFF: Warna Abu, Geser Kiri (Posisi Awal)
+            toggleBtn.classList.remove('bg-accent');
+            toggleBtn.classList.add('bg-gray-600');
+            
+            // Balikin lingkaran ke 0px
             toggleCircle.style.transform = "translateX(0px)";
+            
             dialogStatus.innerText = "OFF";
-            dialogStatus.style.color = "#9ca3af";
+            dialogStatus.style.color = "#9ca3af"; // Abu-abu
         }
     }
 
-    // 3. LOGIC GENERATE (THE FIX)
+    // 3. LOGIC GENERATE (SAMA KAYAK SEBELUMNYA)
     if (btnAnalyze) {
         btnAnalyze.onclick = async () => {
             const concept = storyInput.value.trim();
             if (!concept) return alert("Isi konsep cerita dulu bro!");
 
-            // UI Loading
+            // Simpan state dialog terakhir sebelum kirim
+            STATE.updateStory(concept, isDialogOn);
+
             const originalText = btnAnalyze.innerHTML;
             btnAnalyze.innerHTML = `<i class="ph ph-spinner animate-spin text-xl"></i> <span>Menulis Cerita (Claude)...</span>`;
             btnAnalyze.disabled = true;
 
             try {
-                // TAHAP 1: Generate Cerita Lengkap
+                // TAHAP 1: Generate Cerita
                 const fullStory = await generateStoryAI(concept, isDialogOn);
                 
-                // Tampilkan Hasil
                 finalStoryText.innerText = fullStory;
                 resultArea.classList.remove('hidden');
                 
-                // Update tombol loading
                 btnAnalyze.innerHTML = `<i class="ph ph-spinner animate-spin text-xl"></i> <span>Mendeteksi Karakter...</span>`;
 
-                // TAHAP 2: Extract Karakter dari Cerita Lengkap (Bukan Konsep)
+                // TAHAP 2: Extract Karakter
                 const characters = await extractCharactersAI(fullStory);
 
                 if (!characters || characters.length === 0) {
-                    alert("Cerita jadi, tapi AI gagal nemu karakter.");
+                    alert("Cerita jadi, tapi karakter tidak terdeteksi.");
                 } else {
                     renderTags(characters);
                 }
 
-                // SIMPAN KE DATABASE
+                // SIMPAN SEMUA
                 STATE.data.story.text = concept;
-                STATE.data.story.generatedText = fullStory; // Simpan cerita jadi
+                STATE.data.story.generatedText = fullStory;
                 STATE.data.story.characters = characters;
+                STATE.data.story.useDialog = isDialogOn; // Pastikan kesimpen
                 STATE.save();
 
-                // Final UI Update
                 btnAnalyze.classList.add('hidden');
                 btnNext.classList.remove('hidden');
 
@@ -109,19 +133,19 @@ window.setupTab1 = function() {
     function renderTags(characters) {
         tagsList.innerHTML = "";
         characters.forEach(char => {
-            // Handle kalau data lama masih String, atau data baru Object
             const name = typeof char === 'string' ? char : char.name;
             const desc = typeof char === 'string' ? '' : char.visual;
             
             const tag = document.createElement('div');
             tag.className = "bg-accent/10 text-accent border border-accent/20 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 animate-fade-in group relative cursor-help";
             tag.innerHTML = `<i class="ph ph-user"></i> ${name}`;
-            
-            // Tooltip deskripsi fisik pas di-hover
-            if(desc) {
-                tag.title = desc; // Simpel tooltip
-            }
-            
+            if(desc) tag.title = desc;
             tagsList.appendChild(tag);
         });
     }
+
+    window.copyStory = function() {
+        navigator.clipboard.writeText(finalStoryText.innerText);
+        alert("Cerita berhasil disalin!");
+    }
+};
