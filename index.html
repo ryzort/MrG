@@ -71,12 +71,24 @@
         </header>
 
         <!-- NAVIGATION TABS -->
-        <nav class="flex flex-wrap gap-2 mb-6 p-2 glass-panel rounded-xl sticky top-4 z-50">
-            <button onclick="switchTab(1)" id="btn-tab-1" class="tab-btn active">1. Story Concept</button>
-            <button onclick="switchTab(2)" id="btn-tab-2" class="tab-btn">2. Style & Config</button>
-            <button onclick="switchTab(3)" id="btn-tab-3" class="tab-btn">3. Characters</button>
-            <button onclick="switchTab(4)" id="btn-tab-4" class="tab-btn">4. Scenes</button>
-            <button onclick="switchTab(5)" id="btn-tab-5" class="tab-btn">5. Video Output</button>
+        <!-- NAVIGATION TABS (SCROLLABLE) -->
+        <!-- Update: Pake overflow-x-auto biar bisa discroll samping di HP -->
+        <nav class="flex overflow-x-auto no-scrollbar gap-3 mb-8 p-1.5 glass-panel rounded-xl sticky top-4 z-50 snap-x">
+            <button onclick="switchTab(1)" id="btn-tab-1" class="tab-btn active snap-center">
+                <span class="hidden md:inline">1. </span>Story
+            </button>
+            <button onclick="switchTab(2)" id="btn-tab-2" class="tab-btn snap-center">
+                <span class="hidden md:inline">2. </span>Style
+            </button>
+            <button onclick="switchTab(3)" id="btn-tab-3" class="tab-btn snap-center">
+                <span class="hidden md:inline">3. </span>Characters
+            </button>
+            <button onclick="switchTab(4)" id="btn-tab-4" class="tab-btn snap-center">
+                <span class="hidden md:inline">4. </span>Scenes
+            </button>
+            <button onclick="switchTab(5)" id="btn-tab-5" class="tab-btn snap-center">
+                <span class="hidden md:inline">5. </span>Video
+            </button>
         </nav>
 
         <!-- MAIN CONTENT AREA (Dynamic Load) -->
