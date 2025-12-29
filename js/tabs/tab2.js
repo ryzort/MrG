@@ -5,69 +5,99 @@
 window.setupTab2 = function() {
     console.log("[Tab 2] Initializing...");
     
-    // Ambil elemen DOM
     const btnUpload = document.getElementById('btn-upload-style');
     const statusTxt = document.getElementById('style-status');
     const masterPrompt = document.getElementById('master-prompt');
     const toggleQuality = document.getElementById('toggle-quality');
     const fileInput = document.getElementById('style-file');
     const urlInput = document.getElementById('style-url');
+    const imgPreview = document.getElementById('image-preview');
+    const uploadPlaceholder = document.getElementById('upload-placeholder');
+    
+    // Variable lokal buat rasio (Default 1:1)
+    let selectedAspectRatio = "1:1";
 
-    // Safety check: Kalau elemen gak ada, stop
     if(!masterPrompt) return;
 
-    // --- 1. LOAD DATA LAMA (State Management) ---
-    // Kalau user balik dari Tab 3, isiannya jangan ilang
+    // --- 1. LOAD DATA LAMA ---
     masterPrompt.value = STATE.data.style.artPrompt || "";
     if(toggleQuality) toggleQuality.checked = STATE.data.style.isProQuality;
-    if(STATE.data.style.refImage) {
-        urlInput.value = STATE.data.style.refImage;
-        statusTxt.innerText = "✅ Gambar sebelumnya tersimpan.";
-        statusTxt.className = "text-[10px] text-green-400 mt-3 text-center";
+    
+    // Load Rasio yang tersimpan (kalo ada)
+    if (STATE.data.style.ratio) {
+        selectRatioUI(STATE.data.style.ratio);
     }
 
-    // --- 2. LOGIC TOMBOL UPLOAD & ANALISA ---
+    // Load Gambar Preview (kalo ada)
+    if(STATE.data.style.refImage) {
+        urlInput.value = STATE.data.style.refImage;
+        showPreview(STATE.data.style.refImage);
+    }
+
+    // --- 2. FITUR PREVIEW GAMBAR ---
+    // Pas user pilih file, langsung tampilin (belum upload)
+    fileInput.onchange = function() {
+        if (this.files && this.files[0]) {
+            const objectUrl = URL.createObjectURL(this.files[0]);
+            showPreview(objectUrl);
+            // Kosongin input URL biar gak bingung
+            urlInput.value = ""; 
+        }
+    };
+
+    // Pas user ngetik/paste URL, tampilin preview
+    urlInput.oninput = function() {
+        if (this.value.trim()) {
+            showPreview(this.value.trim());
+        }
+    };
+
+    function showPreview(src) {
+        imgPreview.src = src;
+        imgPreview.classList.remove('hidden');
+        uploadPlaceholder.classList.add('hidden');
+    }
+
+    // --- 3. LOGIC UPLOAD & ANALISA ---
     if (btnUpload) {
         btnUpload.onclick = async () => {
-            let imageUrl = urlInput.value.trim();
             const hasFile = fileInput.files.length > 0;
+            let imageUrl = urlInput.value.trim();
 
             if (!imageUrl && !hasFile) {
-                return alert("Pilih file gambar dulu atau paste link-nya bro!");
+                return alert("Masukin gambar dulu bro!");
             }
 
-            // UI Loading (Biar user tau lagi mikir)
+            // UI Loading
             const originalBtnText = btnUpload.innerHTML;
             btnUpload.disabled = true;
             btnUpload.innerHTML = `<i class="ph ph-spinner animate-spin"></i> Processing...`;
             statusTxt.className = "text-[10px] text-accent mt-3 text-center animate-pulse";
             
             try {
-                // A. Kalau Upload File -> Kirim ke ImgBB
+                // LOGIC LU: File -> ImgBB -> Link
                 if (hasFile) {
-                    statusTxt.innerText = "⏳ Sedang mengupload ke ImgBB...";
-                    // Panggil fungsi upload dari api.js
+                    statusTxt.innerText = "⏳ Uploading ke ImgBB...";
                     imageUrl = await uploadToImgBB(fileInput.files[0]);
-                    urlInput.value = imageUrl; // Tampilkan URL hasil upload
+                    urlInput.value = imageUrl; 
+                    console.log("Uploaded to ImgBB:", imageUrl);
+                } 
+                // LOGIC LU: Link -> Direct (Gak perlu upload lagi)
+                else {
+                    console.log("Using direct link:", imageUrl);
                 }
 
-                // B. Analisa Style via AI
+                // ANALISA STYLE
                 statusTxt.innerText = "👁️ AI sedang menganalisa visual style...";
                 
-                // Prompt khusus buat nyuri style gambar
-                const prompt = `Describe the art style, lighting, color palette, and rendering technique of the image at this URL: "${imageUrl}". 
-                Output ONE concise paragraph suitable for an image generation prompt. Focus only on visual style.`;
+                const prompt = `Analyze this image style for a generative AI prompt. Focus on art style, lighting, and texture. Keep it concise (under 50 words). Image URL: "${imageUrl}"`;
                 
-                // Panggil AI (Logic Lu: OpenAI)
                 const styleDesc = await callAI(CONFIG.AI_MODELS.logic, prompt);
-
-                // Bersihin hasil
                 const cleanStyle = styleDesc.replace(/```/g, '').replace(/"/g, '').trim();
                 
                 masterPrompt.value = cleanStyle;
-                STATE.data.style.refImage = imageUrl;
+                STATE.data.style.refImage = imageUrl; // Simpan link gambar
                 
-                // UI Sukses
                 statusTxt.className = "text-[10px] text-green-400 mt-3 text-center font-bold";
                 statusTxt.innerHTML = `<i class="ph ph-check-circle"></i> Style Berhasil Dikunci!`;
 
@@ -76,31 +106,51 @@ window.setupTab2 = function() {
                 statusTxt.className = "text-[10px] text-red-400 mt-3 text-center";
                 statusTxt.innerText = "❌ Error: " + err.message;
             } finally {
-                // Balikin Tombol
                 btnUpload.disabled = false;
                 btnUpload.innerHTML = originalBtnText;
             }
         };
     }
 
-    // --- 3. LOGIC TOMBOL NEXT (GLOBAL) ---
-    // Fungsi ini dipanggil dari onclick HTML "Simpan & Lanjut"
+    // --- 4. LOGIC ASPECT RATIO (Global Function) ---
+    window.selectRatio = function(ratio) {
+        selectedAspectRatio = ratio;
+        selectRatioUI(ratio);
+    };
+
+    function selectRatioUI(ratio) {
+        selectedAspectRatio = ratio;
+        // Reset semua tombol jadi abu-abu
+        ['1:1', '16:9', '9:16'].forEach(r => {
+            const id = r === '1:1' ? 'ratio-square' : r === '16:9' ? 'ratio-landscape' : 'ratio-portrait';
+            const btn = document.getElementById(id);
+            if(btn) {
+                btn.className = "ratio-btn bg-black/30 border border-white/10 text-gray-400 py-2 rounded-lg text-xs font-bold hover:bg-white/5 transition-all w-full";
+            }
+        });
+
+        // Highlight tombol yang dipilih
+        const activeId = ratio === '1:1' ? 'ratio-square' : ratio === '16:9' ? 'ratio-landscape' : 'ratio-portrait';
+        const activeBtn = document.getElementById(activeId);
+        if(activeBtn) {
+            activeBtn.className = "ratio-btn active bg-accent/20 border border-accent text-white py-2 rounded-lg text-xs font-bold hover:bg-accent/30 transition-all w-full shadow-[0_0_10px_rgba(99,102,241,0.3)]";
+        }
+    }
+
+    // --- 5. LOGIC SAVE & NEXT ---
     window.saveStyleAndNext = function() {
         const prompt = masterPrompt.value.trim();
-        // Kalau kosong, ingetin user
-        if (!prompt) {
-            const proceed = confirm("Style Prompt masih kosong. AI bakal pake style default. Yakin lanjut?");
-            if (!proceed) return;
-        }
-
         const isPro = toggleQuality.checked;
         
-        // Simpan ke State Database
+        // Simpan Config ke Database
         STATE.updateStyleConfig(prompt, isPro);
         
-        console.log("Style Saved:", { prompt, isPro });
+        // Simpan Ratio ke Database Manual (karena gak ada di helper updateStyleConfig yg lama)
+        STATE.data.style.ratio = selectedAspectRatio;
+        STATE.save();
         
-        // Pindah ke Tab 3 (Character)
+        console.log("Saved:", { prompt, isPro, ratio: selectedAspectRatio });
+        
         switchTab(3);
     };
 };
