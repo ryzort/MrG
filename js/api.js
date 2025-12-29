@@ -72,31 +72,21 @@ async function fetchImageBlobAI(prompt, width = 1024, height = 1024) {
     const model = isPro ? "seedream-pro" : "seedream";
     const seed = STATE.data.sessionSeed;
 
-    // 1. Teknik encodeURIComponent (Aman dari karakter aneh)
+    // Encode prompt
     const encodedPrompt = encodeURIComponent(prompt);
+    
+    // GUNAKAN WIDTH & HEIGHT DARI PARAMETER
     const url = `https://gen.pollinations.ai/image/${encodedPrompt}?model=${model}&width=${width}&height=${height}&seed=${seed}&nologo=true&enhance=true`;
 
-    console.log(`[API Image VIP] Generating: ${width}x${height}`);
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
 
-    try {
-        // 2. Teknik fetch dengan Header (Jalur VIP/Prioritas)
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`
-            }
-        });
+    if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
-        if (!response.ok) throw new Error(`Image API failed: ${response.status}`);
-
-        // 3. Teknik URL.createObjectURL (Ubah Blob jadi Link Gambar Lokal)
-        const blob = await response.blob();
-        return URL.createObjectURL(blob); 
-
-    } catch (err) {
-        console.error("Fetch Image Error:", err);
-        throw err;
-    }
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
 }
 
 // ==========================================
