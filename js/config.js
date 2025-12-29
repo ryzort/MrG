@@ -3,13 +3,13 @@ const CONFIG = {
     getImgBBKey: () => localStorage.getItem('mrg_imgbb_key') || "",
     getPollinationsKey: () => localStorage.getItem('mrg_polli_key') || "",
 
-    // DAFTAR MODEL (LOGIC LU)
+    // DAFTAR MODEL
     AI_MODELS: {
-        story: "claude",           // Paling jago nulis cerita
-        logic: "openai",           // Paling jago struktur data/JSON
-        vision: "openai",          // Buat analisa gambar
-        image_std: "seedream",     // Gambar Standar
-        image_pro: "seedream-pro"  // Gambar Pro (4K)
+        story: "claude",           // Cerita
+        logic: "openai",           // Logic biasa
+        vision: "gpt-4o",          // <--- GANTI JADI 'gpt-4o' (Ini yang punya mata)
+        image_std: "seedream",     
+        image_pro: "seedream-pro"  
     },
 
     ERRORS: {
