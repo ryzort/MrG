@@ -33,6 +33,13 @@
     <div class="fixed inset-0 z-[-1] opacity-20 pointer-events-none bg-pattern"></div>
 
     <div class="container mx-auto px-4 py-6 max-w-6xl">
+
+        <!-- Tombol Settings -->
+<button onclick="toggleSettings()" class="p-2 rounded-full hover:bg-white/10 transition-colors border border-white/10 group relative">
+    <i class="ph ph-gear text-2xl text-gray-400 group-hover:text-accent transition-colors"></i>
+    <!-- Titik Merah kalau Key belum diset -->
+    <span id="settings-alert" class="hidden absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+</button>
         
         <!-- HEADER -->
         <header class="flex items-center justify-between mb-8 animate-fade-in">
@@ -79,5 +86,43 @@
     <script src="js/state.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/main.js"></script>
+    
+    <!-- MODAL SETTINGS (Hidden by default) -->
+<div id="settings-modal" class="fixed inset-0 z-[100] hidden">
+    <!-- Backdrop Blur -->
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="toggleSettings()"></div>
+    
+    <!-- Content -->
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#1e1e24] border border-white/10 rounded-2xl p-6 shadow-2xl transform transition-all scale-100">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="ph ph-lock-key text-accent"></i> API Configuration
+            </h2>
+            <button onclick="toggleSettings()" class="text-gray-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+        </div>
+
+        <div class="space-y-4">
+            <!-- ImgBB Input -->
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1">ImgBB API Key (Wajib buat Upload)</label>
+                <input type="password" id="input-imgbb-key" placeholder="Paste key ImgBB lu disini..." 
+                    class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-accent transition-colors">
+            </div>
+
+            <!-- Pollinations Toggle (Opsional klo mau private) -->
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1">Pollinations Key (Opsional)</label>
+                <input type="password" id="input-polli-key" placeholder="Kosongin aja kalau mau gratisan..." 
+                    class="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-accent transition-colors">
+                <p class="text-[10px] text-gray-500 mt-1">*Key disimpan aman di browser lu (LocalStorage).</p>
+            </div>
+
+            <button onclick="saveSettings()" class="w-full bg-accent hover:bg-indigo-500 text-white font-medium py-3 rounded-lg transition-all shadow-[0_0_15px_rgba(99,102,241,0.3)] mt-2">
+                Simpan Konfigurasi
+            </button>
+        </div>
+    </div>
+</div>
 </body>
               </html>
+
