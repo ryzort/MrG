@@ -92,3 +92,22 @@ async function uploadToImgBB(file) {
     
     return data.data.url;
 }
+
+// ... kode api.js sebelumnya ...
+
+// 3. Generate Story (Wrapper buat Claude)
+async function generateStoryAI(topic, useDialog) {
+    const mode = useDialog ? 'Naskah Full Dialog (Script Format)' : 'Cerita Narasi Novel';
+    
+    // Prompt biar AI nulis panjang & bagus
+    const prompt = `Tulis cerita sci-fi/fantasy profesional dan detail berdasarkan konsep ini: "${topic}".
+    
+    Setting Mode: ${mode}.
+    Bahasa: Indonesia.
+    Gaya Bahasa: Sinematik, detail, emosional.
+    
+    Output hanya isi ceritanya saja tanpa pembuka/penutup dari AI.`;
+    
+    // Panggil model story (Claude)
+    return await callAI(CONFIG.AI_MODELS.story, prompt);
+}
