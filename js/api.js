@@ -1,51 +1,49 @@
 // HELPER: Cek Error & Tampilkan Alert
 function handleError(error, context) {
     console.error(`[${context}] Error:`, error);
-    alert(`Gagal di ${context}!\nError: ${error.message || error}`);
-    throw error; // Lempar error biar proses berhenti
+    // Alert cuma muncul kalau errornya parah banget
+    if (!error.message.includes("JSON")) { 
+        alert(`Gagal di ${context}!\nError: ${error.message || error}`);
+    }
+    throw error; 
 }
 
 /**
- * 1. TEXT & CHAT GENERATION
- * Sesuai Doc: POST https://gen.pollinations.ai/v1/chat/completions
- * Body Wajib: model, messages
+ * 1. TEXT & CHAT GENERATION (Jalur Gratis: text.pollinations.ai)
+ * Kita pake endpoint 'text.pollinations.ai' yang support POST tanpa login.
  */
 async function generateText(messages, modelType = 'story') {
-    const apiKey = CONFIG.getPollinationsKey();
-    
-    // Pilih model dari config (misal: "openai" atau "qwen-coder")
+    // Ambil settingan model (default: openai)
     const selectedModel = CONFIG.AI_MODELS[modelType] || "openai"; 
     
-    const url = "https://gen.pollinations.ai/v1/chat/completions";
+    // PENTING: Pake URL ini biar GRATIS & Tanpa Key
+    const url = "https://text.pollinations.ai/"; 
     
-    const headers = {
-        "Content-Type": "application/json",
+    const bodyData = {
+        messages: messages,
+        model: selectedModel,
+        seed: Math.floor(Math.random() * 10000), // Biar variatif
+        jsonMode: modelType === 'json' // Aktifin mode JSON kalau perlu
     };
-    
-    // Kalau ada key, pasang Bearer Token
-    if (apiKey) {
-        headers["Authorization"] = `Bearer ${apiKey}`;
-    }
 
     try {
         const response = await fetch(url, {
             method: "POST",
-            headers: headers,
-            body: JSON.stringify({
-                model: selectedModel, // <-- INI YANG WAJIB DIKIRIM
-                messages: messages,
-                temperature: 0.7,     // Kreativitas standar
-                max_tokens: 2000      // Biar ceritanya panjang
-            })
+            headers: {
+                "Content-Type": "application/json",
+                // GAK PERLU HEADER AUTHORIZATION BUAT URL INI
+            },
+            body: JSON.stringify(bodyData)
         });
 
         if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(`Server AI Error (${response.status}): ${errData.error?.message || response.statusText}`);
+            throw new Error(`Server AI Error (${response.status})`);
         }
         
-        const data = await response.json();
-        return data.choices[0].message.content; // Ambil teks jawaban
+        // Output dari server ini text murni (bukan JSON object openai standard)
+        // Jadi kita ambil text()-nya langsung
+        const textResult = await response.text();
+        return textResult;
 
     } catch (err) {
         handleError(err, `Generate Text (${selectedModel})`);
@@ -54,59 +52,44 @@ async function generateText(messages, modelType = 'story') {
 
 /**
  * 2. IMAGE GENERATION (URL Builder)
- * Sesuai Doc: GET https://gen.pollinations.ai/image/{prompt}?model=flux&...
+ * Sesuai Doc: GET https://image.pollinations.ai/...
  */
 function generateImageURL(prompt, width = 1024, height = 1024) {
     const model = CONFIG.AI_MODELS.image || "flux";
-    const seed = Math.floor(Math.random() * 1000000000); // Random Seed
+    const seed = Math.floor(Math.random() * 1000000); 
     
-    // Bersihin prompt dari karakter aneh
     const safePrompt = encodeURIComponent(prompt);
     
-    // Rangkai URL sesuai parameter dokumentasi
-    // nologo=true (biar bersih)
-    // enhance=true (biar AI benerin prompt kita dikit)
-    return `https://gen.pollinations.ai/image/${safePrompt}?model=${model}&width=${width}&height=${height}&seed=${seed}&nologo=true&enhance=true`;
+    // Pake image.pollinations.ai biar konsisten
+    return `https://image.pollinations.ai/prompt/${safePrompt}?model=${model}&width=${width}&height=${height}&seed=${seed}&nologo=true`;
 }
 
 /**
  * 3. VISION (Analisa Gambar)
- * Sesuai Doc: Body messages array beda format (ada type: text & type: image_url)
- * Model Wajib: gemini / gptimage / claude-large (yang support vision)
+ * Khusus Vision kita coba tembak model 'gpt-4o' atau 'gemini' via text endpoint
  */
 async function analyzeImageStyle(imageUrl) {
-    const model = CONFIG.AI_MODELS.vision; // Pastikan ini "gemini" atau model vision lain
-    
     const messages = [
         {
             role: "user",
             content: [
-                { 
-                    type: "text", 
-                    text: "Analyze this image's art style, lighting, and colors. Describe it in a detailed prompt format for image generation. Focus on visual description only." 
-                },
-                { 
-                    type: "image_url", 
-                    image_url: { 
-                        url: imageUrl 
-                    } 
-                }
+                { type: "text", text: "Analyze the art style of this image. Describe it in 50 words for an image prompt." },
+                { type: "image_url", image_url: { url: imageUrl } }
             ]
         }
     ];
 
-    // Panggil fungsi generateText tapi pake flag 'vision' biar ngambil model vision
     return await generateText(messages, 'vision');
 }
 
 /**
  * 4. UPLOAD IMGBB
- * Sesuai Doc: POST https://api.imgbb.com/1/upload
+ * Tetap butuh API Key ImgBB (Wajib)
  */
 async function uploadToImgBB(file) {
     const apiKey = CONFIG.getImgBBKey();
     if (!apiKey) {
-        alert(CONFIG.ERRORS.missingKey);
+        alert("Woy bro! Masukin API Key ImgBB dulu di tombol Gear ⚙️");
         throw new Error("API Key ImgBB Kosong");
     }
 
@@ -114,7 +97,6 @@ async function uploadToImgBB(file) {
     formData.append("image", file);
 
     try {
-        // Tampilkan loading (opsional bisa di handle di UI)
         console.log("Sedang upload ke ImgBB...");
         
         const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
@@ -132,4 +114,4 @@ async function uploadToImgBB(file) {
     } catch (err) {
         handleError(err, "Upload ImgBB");
     }
-            }
+        }
