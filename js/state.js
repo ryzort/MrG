@@ -1,36 +1,35 @@
 const STATE = {
-    // Data Default (Kosong)
     data: {
         story: {
             text: "",
-            useDialog: true, // Toggle Dialog
-            characters: []   // List nama karakter (Jono, Joni)
+            useDialog: false, 
+            characters: []
         },
         style: {
-            refImage: "",    // Link gambar referensi
-            artPrompt: "",   // Hasil analisa AI tentang style
-            ratio: "1:1",    // Aspect ratio
-            sceneCount: 5    // Jumlah scene
+            refImage: "",
+            // Default style dari kode lu:
+            artPrompt: "3D animation style, Pixar style, cinematic lighting, highly detailed",
+            isProQuality: true, // Default ON (Toggle Quality)
         },
-        characters: [],      // Array kartu karakter detail
-        scenes: []           // Array panel scene
+        // Session Seed biar karakter konsisten (Logic Lu)
+        sessionSeed: Math.floor(Math.random() * 999999),
+        scenes: []
     },
 
-    // Load data pas web dibuka
     init() {
         const saved = localStorage.getItem('mrg_project_data');
         if (saved) {
-            this.data = JSON.parse(saved);
+            // Merge saved data dengan default biar seed gak ilang
+            const parsed = JSON.parse(saved);
+            this.data = { ...this.data, ...parsed };
         }
     },
 
-    // Simpan data ke LocalStorage
     save() {
         localStorage.setItem('mrg_project_data', JSON.stringify(this.data));
-        console.log("Data tersimpan aman.");
     },
 
-    // Fungsi Update per Bagian (Biar rapi)
+    // Update Helpers
     updateStory(text, useDialog) {
         this.data.story.text = text;
         this.data.story.useDialog = useDialog;
@@ -41,15 +40,13 @@ const STATE = {
         this.data.story.characters = tags;
         this.save();
     },
-
-    updateStyle(imgUrl, prompt, ratio, count) {
-        this.data.style.refImage = imgUrl;
+    
+    // Simpan status Toggle Quality disini
+    updateStyleConfig(prompt, isPro) {
         this.data.style.artPrompt = prompt;
-        this.data.style.ratio = ratio;
-        this.data.style.sceneCount = count;
+        this.data.style.isProQuality = isPro;
         this.save();
     }
 };
 
-// Jalanin init pas file dimuat
 STATE.init();
