@@ -5,46 +5,46 @@
 window.setupTab1 = function() {
     console.log("[Tab 1] Initializing...");
 
-    // Ambil elemen DOM
     const storyInput = document.getElementById('story-input');
+    const finalStoryText = document.getElementById('final-story-text');
+    const resultArea = document.getElementById('result-area');
     const toggleBtn = document.getElementById('toggle-dialog');
     const toggleCircle = document.getElementById('toggle-circle');
     const dialogStatus = document.getElementById('dialog-status');
     const btnAnalyze = document.getElementById('btn-analyze');
     const btnNext = document.getElementById('btn-next-tab');
-    const tagsContainer = document.getElementById('char-tags-container');
     const tagsList = document.getElementById('tags-list');
 
-    // Safety Check: Kalau elemen gak ada, stop biar gak error console
     if (!storyInput) return;
 
-    // --- 1. LOAD DATA LAMA (State Management) ---
+    // 1. Load Data Lama
     const savedData = STATE.data.story;
-    storyInput.value = savedData.text || "";
+    storyInput.value = savedData.text || ""; // Input kasar
     let isDialogOn = savedData.useDialog;
     
-    // Set UI awal sesuai data simpanan
+    // Kalau udah pernah generate, tampilin hasilnya
+    if (savedData.generatedText) {
+        finalStoryText.innerText = savedData.generatedText;
+        resultArea.classList.remove('hidden');
+        btnAnalyze.classList.add('hidden');
+        btnNext.classList.remove('hidden');
+        renderTags(savedData.characters);
+    }
+    
     updateToggleUI(isDialogOn);
 
-    if (savedData.characters && savedData.characters.length > 0) {
-        renderTags(savedData.characters);
-        if(btnAnalyze) btnAnalyze.classList.add('hidden');
-        if(btnNext) btnNext.classList.remove('hidden');
-        if(tagsContainer) tagsContainer.classList.remove('hidden');
-    }
-
-    // --- 2. LOGIC TOGGLE DIALOG ---
+    // 2. Toggle Logic
     if(toggleBtn) {
         toggleBtn.onclick = () => {
             isDialogOn = !isDialogOn;
             updateToggleUI(isDialogOn);
-            STATE.updateStory(storyInput.value, isDialogOn);
+            STATE.updateStory(storyInput.value, isDialogOn); // Simpan
         };
     }
 
     function updateToggleUI(isOn) {
         if (isOn) {
-            toggleBtn.classList.replace('bg-gray-600', 'bg-accent'); // Ungu
+            toggleBtn.classList.replace('bg-gray-600', 'bg-accent');
             toggleCircle.style.transform = "translateX(24px)";
             dialogStatus.innerText = "ON";
             dialogStatus.style.color = "#6366f1";
@@ -56,62 +56,69 @@ window.setupTab1 = function() {
         }
     }
 
-    // --- 3. LOGIC TOMBOL ANALISA (THE BRAIN) ---
+    // 3. LOGIC GENERATE (THE FIX)
     if (btnAnalyze) {
         btnAnalyze.onclick = async () => {
-            const text = storyInput.value.trim();
-            if (!text) return alert("Bro, tulis dulu ceritanya!");
+            const concept = storyInput.value.trim();
+            if (!concept) return alert("Isi konsep cerita dulu bro!");
 
-            // Simpan state dulu
-            STATE.updateStory(text, isDialogOn);
-            
-            // Efek Loading Keren
+            // UI Loading
             const originalText = btnAnalyze.innerHTML;
-            btnAnalyze.innerHTML = `<i class="ph ph-spinner animate-spin text-xl"></i> <span>Sedang Membaca Cerita...</span>`;
+            btnAnalyze.innerHTML = `<i class="ph ph-spinner animate-spin text-xl"></i> <span>Menulis Cerita (Claude)...</span>`;
             btnAnalyze.disabled = true;
-            btnAnalyze.classList.remove('btn-neon'); // Hilangin glow sementara
-            btnAnalyze.style.opacity = "0.7";
 
             try {
-                // Panggil Fungsi Canggih dari api.js (Logic Lu)
-                // Kita panggil extractCharactersAI yg pake OpenAI + JSON Cleaner
-                const characters = await extractCharactersAI(text);
+                // TAHAP 1: Generate Cerita Lengkap
+                const fullStory = await generateStoryAI(concept, isDialogOn);
+                
+                // Tampilkan Hasil
+                finalStoryText.innerText = fullStory;
+                resultArea.classList.remove('hidden');
+                
+                // Update tombol loading
+                btnAnalyze.innerHTML = `<i class="ph ph-spinner animate-spin text-xl"></i> <span>Mendeteksi Karakter...</span>`;
+
+                // TAHAP 2: Extract Karakter dari Cerita Lengkap (Bukan Konsep)
+                const characters = await extractCharactersAI(fullStory);
 
                 if (!characters || characters.length === 0) {
-                    alert("AI bingung bro. Gak nemu nama karakter. Coba sebut nama tokohnya lebih jelas.");
+                    alert("Cerita jadi, tapi AI gagal nemu karakter.");
                 } else {
-                    STATE.setCharactersList(characters);
                     renderTags(characters);
-                    
-                    // Sukses: Ganti tombol
-                    btnAnalyze.classList.add('hidden');
-                    btnNext.classList.remove('hidden');
-                    tagsContainer.classList.remove('hidden');
                 }
+
+                // SIMPAN KE DATABASE
+                STATE.data.story.text = concept;
+                STATE.data.story.generatedText = fullStory; // Simpan cerita jadi
+                STATE.data.story.characters = characters;
+                STATE.save();
+
+                // Final UI Update
+                btnAnalyze.classList.add('hidden');
+                btnNext.classList.remove('hidden');
+
             } catch (err) {
                 console.error(err);
-                alert("Gagal Analisa: " + err.message);
-            } finally {
-                // Balikin tombol ke asal (kalo gagal)
-                if(!btnAnalyze.classList.contains('hidden')) {
-                    btnAnalyze.innerHTML = originalText;
-                    btnAnalyze.disabled = false;
-                    btnAnalyze.classList.add('btn-neon');
-                    btnAnalyze.style.opacity = "1";
-                }
+                alert("Error: " + err.message);
+                btnAnalyze.innerHTML = originalText;
+                btnAnalyze.disabled = false;
             }
         };
     }
 
-    // Helper: Render Tag Warna-Warni
     function renderTags(names) {
         tagsList.innerHTML = "";
         names.forEach(name => {
             const tag = document.createElement('div');
-            // Style tag pake class Tailwind + Custom CSS
-            tag.className = "bg-accent/10 text-accent border border-accent/20 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 animate-fade-in hover:bg-accent/20 transition-colors cursor-default";
-            tag.innerHTML = `<i class="ph ph-user-circle text-lg"></i> ${name}`;
+            tag.className = "bg-accent/10 text-accent border border-accent/20 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 animate-fade-in";
+            tag.innerHTML = `<i class="ph ph-user"></i> ${name}`;
             tagsList.appendChild(tag);
         });
+    }
+
+    // Global helper buat copy text
+    window.copyStory = function() {
+        navigator.clipboard.writeText(finalStoryText.innerText);
+        alert("Cerita berhasil disalin!");
     }
 };
