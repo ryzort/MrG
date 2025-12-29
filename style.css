@@ -54,3 +54,8 @@
 .animate-fade-in {
     animation: fadeIn 0.5s ease-out forwards;
 }
+
+/* Transisi Content */
+#app-content {
+    transition: opacity 0.3s ease-in-out;
+}
