@@ -6,11 +6,11 @@ const CONFIG = {
     // DAFTAR MODEL (Sesuai Screenshot & Doc lu)
     // Lu bisa ganti nama model ini sesuai list di: https://gen.pollinations.ai/v1/models
     AI_MODELS: {
-        story: "openai",          // Model cerdas buat nulis cerita
-        vision: "gemini",         // Model yang punya logo "Mata" (Vision)
-        json: "qwen-coder",       // Model jago koding/struktur data
-        image: "flux",            // Model gambar paling bagus saat ini
-        video_prompt: "mistral"   // Model buat bikin prompt video (opsional)
+        story: "openai",          // Paling stabil buat text
+        vision: "gpt-4o",         // Buat liat gambar
+        json: "openai",           // Ganti qwen jadi openai biar aman
+        image: "flux",            // Gambar tetep flux
+        video_prompt: "mistral"   
     },
 
     ERRORS: {
