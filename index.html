@@ -1,33 +1,83 @@
-<!doctype html>
-<html lang="id">
+<!DOCTYPE html>
+<html lang="id" class="dark">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MrG — AI Production Suite</title>
-  <link rel="stylesheet" href="styles/main.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MrG - AI Storyboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0f0f13', // Warna background gelap spesial
+                        accent: '#6366f1', // Warna ungu neon
+                        cardbg: '#1e1e24'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Icon Library (Phosphor Icons - Ringan & Keren) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
-<body>
-  <header class="topbar">
-    <div class="brand">MrG — AI Production Suite</div>
-    <nav class="topnav">
-      <button data-route="projects" class="nav-btn">Projects</button>
-      <button data-route="story" class="nav-btn">Story</button>
-      <button data-route="casting" class="nav-btn">Casting</button>
-      <button data-route="scenes" class="nav-btn">Scenes</button>
-      <button data-route="video" class="nav-btn">Video</button>
-      <button data-route="settings" class="nav-btn">Settings</button>
-      <div class="status" id="ai-status">Idle</div>
-    </nav>
-  </header>
+<body class="bg-darkbg text-white min-h-screen font-sans overflow-x-hidden selection:bg-accent selection:text-white">
 
-  <main id="app-root" class="app-root">
-    <!-- Components will be mounted here -->
-  </main>
+    <!-- BACKGROUND ANIMATION (Abstrak) -->
+    <div class="fixed inset-0 z-[-1] opacity-20 pointer-events-none bg-pattern"></div>
 
-  <footer class="footer">
-    <small>Built for GitHub Pages — MVP. Session: localStorage</small>
-  </footer>
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
+        
+        <!-- HEADER -->
+        <header class="flex items-center justify-between mb-8 animate-fade-in">
+            <div class="flex items-center gap-4">
+                <div class="relative w-12 h-12 rounded-full overflow-hidden border-2 border-accent shadow-[0_0_15px_rgba(99,102,241,0.5)]">
+                    <!-- LOGO LU DISINI -->
+                    <img src="logo.png" alt="MrG Logo" class="object-cover w-full h-full">
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">MrG</h1>
+                    <p class="text-xs text-gray-400">AI Story & Visual Architect</p>
+                </div>
+            </div>
+            
+            <!-- Indikator Status (Opsional) -->
+            <div id="status-indicator" class="px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-xs border border-green-500/20 flex items-center gap-2">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                System Ready
+            </div>
+        </header>
 
-  <script type="module" src="src/main.js"></script>
+        <!-- NAVIGATION TABS -->
+        <nav class="flex flex-wrap gap-2 mb-6 p-2 bg-cardbg/50 rounded-xl backdrop-blur-md border border-white/5 sticky top-2 z-50 shadow-lg">
+            <button onclick="switchTab(1)" id="btn-tab-1" class="tab-btn active">1. Story Concept</button>
+            <button onclick="switchTab(2)" id="btn-tab-2" class="tab-btn">2. Style & Config</button>
+            <button onclick="switchTab(3)" id="btn-tab-3" class="tab-btn">3. Characters</button>
+            <button onclick="switchTab(4)" id="btn-tab-4" class="tab-btn">4. Scenes</button>
+            <button onclick="switchTab(5)" id="btn-tab-5" class="tab-btn">5. Video Output</button>
+        </nav>
+
+        <!-- CONTENT AREA (Dinamic Load) -->
+        <main id="app-content" class="min-h-[60vh] relative">
+            <!-- Isi tab bakal masuk sini lewat Javascript -->
+            <div class="text-center py-20 text-gray-500 animate-pulse">
+                Memuat Interface...
+            </div>
+        </main>
+
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
 </body>
-</html>
+              </html>
