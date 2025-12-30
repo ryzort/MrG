@@ -3,76 +3,87 @@
 // ==========================================
 
 window.setupTab4 = function() {
-    console.log("[Tab 4] System Ready.");
+    console.log("[Tab 4] Initializing Scene Director...");
 
     const scenesContainer = document.getElementById('scenes-container');
     const btnGenScenes = document.getElementById('btn-generate-scenes');
     const inputCount = document.getElementById('scene-count');
 
-    // Cek apakah elemen ada
-    if (!btnGenScenes || !scenesContainer) {
-        console.error("[Tab 4] Error: Elemen HTML tidak lengkap.");
-        return;
-    }
+    if (!btnGenScenes) return;
 
-    // LOAD STATE LAMA (Kalau udah pernah generate, tampilin lagi)
+    // LOAD STATE
     if (STATE.data.scenes && STATE.data.scenes.length > 0) {
-        console.log("[Tab 4] Memuat data scene lama...");
         renderScenes(STATE.data.scenes);
     }
 
-    // --- 1. LOGIC KLIK TOMBOL GENERATE ---
+    // --- 1. GENERATE LIST SCENE ---
     btnGenScenes.onclick = async () => {
-        console.log("[Tab 4] Tombol diklik.");
-        
-        // Ambil cerita dari Tab 1
         const story = STATE.data.story.generatedText || STATE.data.story.text;
         const count = inputCount.value || 6;
 
-        if (!story) {
-            alert("Cerita kosong! Balik ke Tab 1 dulu, generate cerita.");
-            return;
-        }
+        if (!story) return alert("Cerita belum ada bro! Generate dulu di Tab 1.");
 
         // UI Loading
         const originalText = btnGenScenes.innerHTML;
         btnGenScenes.disabled = true;
-        btnGenScenes.innerHTML = `<i class="ph ph-spinner animate-spin"></i> Sedang Menulis Skenario...`;
+        btnGenScenes.innerHTML = `<i class="ph ph-spinner animate-spin"></i> Meracik Skenario...`;
         
-        // Tampilkan loading di tengah container
         scenesContainer.innerHTML = `
             <div class="col-span-full flex flex-col items-center justify-center py-20 text-accent animate-pulse">
                 <i class="ph ph-film-strip text-4xl mb-4"></i>
-                <p class="text-sm font-bold">AI sedang memecah cerita menjadi ${count} adegan...</p>
-                <p class="text-xs text-gray-500 mt-2">Mohon tunggu, ini butuh kecerdasan tinggi.</p>
+                <p class="text-sm font-bold">AI sedang menyusun ${count} adegan...</p>
             </div>`;
 
         try {
-            // PROMPT SUTRADARA
+            // PROMPT YANG LEBIH GALAK & SPESIFIK (English Instruction)
             const prompt = `
-            Bertindaklah sebagai Sutradara Film. Analisa cerita ini: 
-            "${story.substring(0, 3000)}..."
+            Role: Professional Movie Director.
+            Task: Split this story into EXACTLY ${count} visual scenes (Storyboard).
+            Story: "${story.substring(0, 3000)}..."
             
-            TUGAS: Pecah cerita menjadi TEPAT ${count} Scene Visual (Storyboard).
-            OUTPUT: HANYA JSON Array murni. Format:
-            [{"id": 1, "text": "Narasi singkat adegan (Bahasa Indonesia)", "visual": "Visual description for AI Image Prompt (English)"}]
+            IMPORTANT RULES:
+            1. Output MUST be a valid JSON Array.
+            2. NO introductory text, NO markdown, NO code blocks. Start directly with [.
+            3. Keys: "id" (number), "text" (Narrative in Indonesian), "visual" (Image prompt in English).
+            
+            Format Example:
+            [{"id": 1, "text": "Jono berjalan di lorong.", "visual": "Cyberpunk corridor, dark lighting"}]
             `;
 
-            console.log("[Tab 4] Mengirim request ke AI...");
+            console.log("[Tab 4] Requesting Scenes...");
             
-            // Panggil AI Logic
-            const raw = await callAI(CONFIG.AI_MODELS.logic, prompt, true);
-            console.log("[Tab 4] AI Menjawab:", raw);
+            // Panggil AI
+            const raw = await callAI(CONFIG.AI_MODELS.logic, prompt, true); // true = auto clean markdown
+            console.log("[Tab 4] Raw Response:", raw);
             
-            // Parse JSON (Pembersih)
+            // --- LOGIC PARSING SUPER KUAT (SANITIZER) ---
             let scenes = [];
             try {
-                const clean = raw.replace(/```json|```/g, "").trim();
-                const m = clean.match(/\[([\s\S]*?)\]/); // Cari kurung siku array
-                scenes = JSON.parse(m ? m[0] : clean);
+                // 1. Cari kurung siku pertama '[' dan terakhir ']'
+                const firstBracket = raw.indexOf('[');
+                const lastBracket = raw.lastIndexOf(']');
+                
+                if (firstBracket !== -1 && lastBracket !== -1) {
+                    // Ambil isinya doang, buang teks sampah di depan/belakang
+                    const cleanJson = raw.substring(firstBracket, lastBracket + 1);
+                    scenes = JSON.parse(cleanJson);
+                } else {
+                    // Kalau gak nemu kurung, coba parse mentah
+                    scenes = JSON.parse(raw);
+                }
+
+                // Validasi apakah hasilnya Array
+                if (!Array.isArray(scenes)) throw new Error("Hasil bukan Array");
+
             } catch (e) {
-                console.error("[Tab 4] Gagal Parse JSON:", e);
-                throw new Error("AI memberikan format yang salah. Coba lagi.");
+                console.error("[Tab 4] Parsing Error:", e);
+                // Fallback: Kalau gagal, coba bersihin karakter aneh
+                try {
+                    const superClean = raw.replace(/[\u0000-\u001F\u007F-\u009F]/g, ""); // Hapus invisible chars
+                    scenes = JSON.parse(superClean);
+                } catch(e2) {
+                    throw new Error("AI ngasih format ngaco. Coba klik Generate lagi bro.");
+                }
             }
 
             // Simpan & Render
@@ -83,11 +94,13 @@ window.setupTab4 = function() {
         } catch (e) {
             console.error(e);
             alert("Gagal: " + e.message);
-            // Balikin tampilan kosong kalau gagal
             scenesContainer.innerHTML = `
                 <div class="col-span-full text-center py-20 bg-red-900/20 border border-red-500/50 rounded-xl">
-                    <i class="ph ph-warning text-4xl text-red-400 mb-2"></i>
-                    <p class="text-red-300">${e.message}</p>
+                    <p class="text-red-300 font-bold mb-2">AI Error / Format Salah</p>
+                    <p class="text-xs text-gray-400">Coba klik Generate sekali lagi.</p>
+                    <div class="mt-4 bg-black/50 p-2 rounded text-[10px] text-left overflow-auto h-24 max-w-lg mx-auto font-mono text-red-200">
+                        ${e.message}
+                    </div>
                 </div>`;
         } finally {
             btnGenScenes.disabled = false;
@@ -95,115 +108,93 @@ window.setupTab4 = function() {
         }
     };
 
-    // --- 2. RENDER PANEL SCENE (INJEKSI HTML) ---
+    // --- 2. RENDER PANEL SCENE ---
     function renderScenes(scenes) {
-        scenesContainer.innerHTML = ""; // Hapus loading/placeholder
+        scenesContainer.innerHTML = "";
         
-        const stylePrompt = STATE.data.style.artPrompt || "Cinematic shot";
+        const stylePrompt = STATE.data.style.artPrompt || "Cinematic";
         const characters = STATE.data.story.characters || [];
         const activeRatio = STATE.data.style.ratio || "16:9"; 
 
-        // Tentukan CSS Rasio
-        let ratioClass = "aspect-video"; // Default 16:9
+        // CSS Rasio
+        let ratioClass = "aspect-video";
         let ratioStyle = "aspect-ratio: 16/9;";
-        
         if (activeRatio === "9:16") { ratioClass = "aspect-[9/16]"; ratioStyle = "aspect-ratio: 9/16;"; }
         if (activeRatio === "1:1") { ratioClass = "aspect-square"; ratioStyle = "aspect-ratio: 1/1;"; }
 
         scenes.forEach((scene, index) => {
-            // LOGIC INJECTION PROMPT (GABUNGKAN KARAKTER KE SCENE)
+            // INJECTION LOGIC (GABUNG PROMPT)
             let injectedPrompt = `${stylePrompt}. Scene ${index+1}: ${scene.visual}. `;
             let detectedRefs = []; 
 
-            // Cek apakah nama karakter disebut di scene ini?
             if (Array.isArray(characters)) {
                 characters.forEach(char => {
-                    // Handle format data char (string/object)
                     const charName = typeof char === 'string' ? char : char.name;
                     const charDesc = typeof char === 'string' ? '' : char.visual;
-                    
-                    const regex = new RegExp(`\\b${charName}\\b`, 'i'); // Cari kata "Jono" (case insensitive)
+                    const regex = new RegExp(`\\b${charName}\\b`, 'i');
                     
                     if (regex.test(scene.text) || regex.test(scene.visual)) {
-                        // KETEMU! Inject deskripsi fisiknya
                         injectedPrompt += ` (${charName}: ${charDesc}). `;
-                        
-                        // Ambil referensi gambar (kalau ada url)
-                        if (typeof char === 'object' && char.generatedUrl) {
-                            detectedRefs.push(char.generatedUrl);
-                        }
+                        if (char.generatedUrl) detectedRefs.push(char.generatedUrl);
                     }
                 });
             }
-
-            injectedPrompt += " Cinematic lighting, masterpiece, 8k.";
+            injectedPrompt += " masterpiece, 8k, highly detailed.";
             
-            // Cek gambar yg udah ada di state scene
             const existingImg = scene.generatedUrl || "logo.png";
             const opacityClass = scene.generatedUrl ? "opacity-100" : "opacity-20";
 
-            // HTML Panel
             const panel = document.createElement('div');
             panel.className = "glass-panel p-4 rounded-xl animate-fade-in group flex flex-col";
             panel.innerHTML = `
                 <div class="flex justify-between items-start mb-3">
-                    <span class="bg-white/10 px-2 py-1 rounded text-[10px] font-bold text-accent">SCENE ${scene.id}</span>
-                    <button onclick="editScenePrompt(${index})" class="text-gray-400 hover:text-white text-xs bg-white/5 px-2 py-1 rounded flex items-center gap-1">
-                        <i class="ph ph-pencil-simple"></i> Edit Prompt
+                    <span class="bg-white/10 px-2 py-1 rounded text-[10px] font-bold text-accent">SCENE ${index+1}</span>
+                    <button onclick="editScenePrompt(${index})" class="text-gray-400 hover:text-white text-xs bg-white/5 px-2 py-1 rounded">
+                        <i class="ph ph-pencil-simple"></i> Edit
                     </button>
                 </div>
                 
-                <p class="text-xs text-gray-300 mb-3 italic leading-relaxed min-h-[3em]">"${scene.text}"</p>
+                <p class="text-xs text-gray-300 mb-3 italic leading-relaxed">"${scene.text}"</p>
 
-                <!-- Frame Gambar -->
                 <div class="w-full bg-black/50 rounded-lg overflow-hidden relative border border-white/5 mb-2 group-hover:shadow-lg transition-all" style="${ratioStyle}">
                     <img id="scene-img-${index}" src="${existingImg}" class="w-full h-full object-contain ${opacityClass} transition-all duration-500">
                     
                     <div id="loader-${index}" class="absolute inset-0 flex flex-col items-center justify-center hidden bg-black/80 z-20">
                         <i class="ph ph-spinner animate-spin text-accent text-3xl mb-2"></i>
-                        <span class="text-[10px] text-white tracking-widest">RENDERING...</span>
+                        <span class="text-[10px] text-white">RENDERING...</span>
                     </div>
 
-                    <button onclick="renderSceneImage(${index})" class="absolute bottom-3 right-3 bg-accent hover:bg-white hover:text-accent text-white px-4 py-2 rounded-lg font-bold shadow-lg transition-transform hover:scale-105 active:scale-95 text-xs flex items-center gap-2 z-30">
+                    <button onclick="renderSceneImage(${index})" class="absolute bottom-3 right-3 bg-accent hover:bg-white hover:text-accent text-white px-4 py-2 rounded-lg font-bold shadow-lg text-xs flex items-center gap-2 z-30 transition-transform active:scale-95">
                         <i class="ph ph-paint-brush-broad"></i> RENDER
                     </button>
                 </div>
 
                 <textarea id="scene-prompt-${index}" class="hidden">${injectedPrompt}</textarea>
-                <!-- Hidden Ref Images (JSON String) -->
                 <input type="hidden" id="scene-refs-${index}" value='${JSON.stringify(detectedRefs)}'>
             `;
             scenesContainer.appendChild(panel);
         });
     }
 
-    // --- 3. GENERATE IMAGE (VIP FETCH) ---
+    // --- 3. RENDER IMAGE (VIP FETCH) ---
     window.renderSceneImage = async function(index) {
         const imgEl = document.getElementById(`scene-img-${index}`);
         const loader = document.getElementById(`loader-${index}`);
         const promptVal = document.getElementById(`scene-prompt-${index}`).value;
-        
-        // Ambil Refs dari hidden input
-        let refImages = [];
-        try {
-            refImages = JSON.parse(document.getElementById(`scene-refs-${index}`).value);
-        } catch(e) { refImages = []; }
+        const refsRaw = document.getElementById(`scene-refs-${index}`).value;
+        const refImages = JSON.parse(refsRaw);
 
-        // Ambil Rasio
         const activeRatio = STATE.data.style.ratio || "16:9";
-        let w = 1280, h = 720; // Default wide
+        let w = 1280, h = 720;
         if (activeRatio === "9:16") { w = 720; h = 1280; }
         if (activeRatio === "1:1") { w = 1024; h = 1024; }
 
-        // UI Reset
         loader.classList.remove('hidden');
         loader.classList.add('flex');
         imgEl.style.opacity = "0.3";
 
         try {
-            console.log(`Rendering Scene ${index}... Refs:`, refImages.length);
-            
-            // Panggil API dengan Multi-Ref (fetchImageBlobAI support 4 param)
+            console.log(`Rendering Scene ${index}...`);
             const objectUrl = await fetchImageBlobAI(promptVal, w, h, refImages);
             
             imgEl.src = objectUrl;
@@ -213,13 +204,11 @@ window.setupTab4 = function() {
                 loader.classList.add('hidden');
                 loader.classList.remove('flex');
                 
-                // Simpan URL
                 if(STATE.data.scenes[index]) {
                     STATE.data.scenes[index].generatedUrl = objectUrl;
-                    STATE.save(); 
+                    STATE.save();
                 }
             };
-
         } catch (e) {
             console.error(e);
             loader.classList.add('hidden');
@@ -228,7 +217,7 @@ window.setupTab4 = function() {
         }
     };
 
-    // --- 4. EDIT POPUP ---
+    // --- 4. EDIT PROMPT ---
     window.editScenePrompt = function(index) {
         const currentPrompt = document.getElementById(`scene-prompt-${index}`).value;
         const modalHtml = `
