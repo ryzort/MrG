@@ -1,5 +1,5 @@
 // ==========================================
-// API CORE (JANTUNG SISTEM - PRO VERSION)
+// API CORE (JANTUNG SISTEM)
 // ==========================================
 
 function cleanJSON(text) {
@@ -8,8 +8,7 @@ function cleanJSON(text) {
 }
 
 /**
- * CORE FUNCTION: callAI (Text/Vision)
- * Logic Retry Loop & Header Auth
+ * CORE: TEXT GENERATION (Retry Logic)
  */
 async function callAI(model, prompt, isJsonMode = false) {
     const apiKey = CONFIG.getPollinationsKey();
@@ -27,18 +26,17 @@ async function callAI(model, prompt, isJsonMode = false) {
         attempt++;
         try {
             console.log(`[API Text] Attempt ${attempt} | Model: ${model}`);
-            const bodyData = { 
-                model: model, 
-                messages: [{ role: 'user', content: prompt }] 
-            };
-
+            
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${apiKey}`
                 },
-                body: JSON.stringify(bodyData)
+                body: JSON.stringify({ 
+                    model: model, 
+                    messages: [{ role: 'user', content: prompt }] 
+                })
             });
 
             if (!response.ok) {
@@ -63,48 +61,54 @@ async function callAI(model, prompt, isJsonMode = false) {
 }
 
 /**
- * PRO IMAGE GENERATION: fetchImageBlobAI
- * Teknik: encodeURIComponent + Fetch Header VIP + Blob + ObjectURL
+ * CORE: IMAGE GENERATION (VIP Fetch Blob)
+ * Menggunakan Header Authorization + ObjectURL biar gambar HD dan aman.
  */
-async function fetchImageBlobAI(prompt, width = 1024, height = 1024) {
+async function fetchImageBlobAI(prompt, width, height) {
     const apiKey = CONFIG.getPollinationsKey();
     const isPro = STATE.data.style.isProQuality;
     const model = isPro ? "seedream-pro" : "seedream";
     const seed = STATE.data.sessionSeed;
 
-    // Encode prompt
-    const encodedPrompt = encodeURIComponent(prompt);
-    
-    // GUNAKAN WIDTH & HEIGHT DARI PARAMETER
-    const url = `https://gen.pollinations.ai/image/${encodedPrompt}?model=${model}&width=${width}&height=${height}&seed=${seed}&nologo=true&enhance=true`;
+    // Tambahkan "Hint" orientasi otomatis biar AI gak ngasih kotak
+    let ratioHint = "";
+    if (width > height) ratioHint = ", wide landscape, 16:9";
+    if (height > width) ratioHint = ", tall portrait, vertical, 9:16";
+
+    // Encode prompt biar URL aman
+    const finalPrompt = prompt + ratioHint;
+    const encodedPrompt = encodeURIComponent(finalPrompt.substring(0, 1000)); // Potong max 1000 char
+
+    // URL Construction
+    const url = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=true`;
+
+    console.log(`[API Image] Fetching ${width}x${height}...`);
 
     const response = await fetch(url, {
         method: 'GET',
         headers: { 'Authorization': `Bearer ${apiKey}` }
     });
 
-    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+    if (!response.ok) throw new Error(`Image API Error: ${response.status}`);
 
     const blob = await response.blob();
     return URL.createObjectURL(blob);
 }
 
-// ==========================================
-// WRAPPER FUNCTIONS
-// ==========================================
+// --- WRAPPER FUNCTIONS ---
 
+// 1. One-Shot Story + Karakter
 async function generateStoryAndChars(topic, useDialog) {
     const styleInstruction = useDialog 
-        ? "WAJIB FORMAT NASKAH FULL DIALOG. Contoh: Jono: 'Halo'. AI dilarang banyak narasi." 
-        : "WAJIB FORMAT NARASI NOVEL. AI dilarang banyak dialog langsung.";
+        ? "WAJIB FORMAT NASKAH FULL DIALOG. Contoh Jono: 'Halo'." 
+        : "WAJIB FORMAT NARASI NOVEL.";
 
     const prompt = `
     TULIS CERITA: "${topic}"
-    ATURAN: ${styleInstruction}
-    BAHASA: Indonesia.
-
-    SETELAH CERITA, TULIS PEMISAH: ###DATA_KARAKTER###
-    LALU BUAT JSON ARRAY: [{"name": "Nama", "visual": "Deskripsi fisik visual bahasa Inggris (hair, face, cloth)"}]
+    ATURAN: ${styleInstruction}. Bahasa: Indonesia.
+    
+    SETELAH CERITA SELESAI, TULIS: ###DATA_KARAKTER###
+    LALU JSON ARRAY: [{"name": "Nama", "visual": "Physical description in English (hair, face, clothes)"}]
     `;
     
     const rawResult = await callAI(CONFIG.AI_MODELS.story, prompt);
@@ -116,13 +120,17 @@ async function generateStoryAndChars(topic, useDialog) {
         storyText = parts[0].trim();
         try {
             const clean = cleanJSON(parts[1]);
-            const m = clean.match(/\[([\s\S]*?)\]/);
+            const m = clean.match(/\[([\s\S]*?)\]/); // Cari kurung siku []
             characters = JSON.parse(m ? m[0] : clean);
-        } catch (e) { console.error("JSON Parse Error"); }
+        } catch (e) { 
+            console.error("JSON Parse Error:", e);
+            characters = [];
+        }
     }
     return { story: storyText, characters: characters };
 }
 
+// 2. Upload ImgBB
 async function uploadToImgBB(file) {
     const apiKey = CONFIG.getImgBBKey();
     const formData = new FormData();
@@ -130,4 +138,4 @@ async function uploadToImgBB(file) {
     const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: "POST", body: formData });
     const data = await res.json();
     return data.data.url;
-                    }
+                }
