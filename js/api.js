@@ -156,7 +156,7 @@ async function fetchImageBlobAI(prompt, width, height, refImages = []) {
 async function generateStoryAndChars(topic, useDialog) {
     const styleInstruction = useDialog 
         ? "WAJIB FORMAT NASKAH FULL DIALOG (Script). Contoh: Jono: 'Halo'. Minimalkan narasi." 
-        : "WAJIB FORMAT NARASI NOVEL. Fokus pada deskripsi suasana tanpa dialog.";
+        : "WAJIB FORMAT NARASI NOVEL. Fokus pada deskripsi suasana dilarang menggunakan dialog.";
 
     const prompt = `
     TUGAS: Tulis cerita pendek berdasarkan konsep: "${topic}"
