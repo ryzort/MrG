@@ -219,21 +219,26 @@ window.setupTab4 = function() {
         imgEl.style.opacity = "0.3";
 
         try {
-            console.log(`Rendering Scene ${index}...`);
-            const objectUrl = await fetchImageBlobAI(promptVal, w, h, refImages);
+            console.log(`Rendering Scene ${index}... Refs:`, refImages.length);
             
-            imgEl.src = objectUrl;
+            // Panggil API (Terima Object)
+            const result = await fetchImageBlobAI(promptVal, w, h, refImages);
+            
+            imgEl.src = result.blobUrl; // Tampilkan Blob
+            
             imgEl.onload = () => {
                 imgEl.classList.remove('opacity-20');
                 imgEl.classList.add('opacity-100');
                 loader.classList.add('hidden');
                 loader.classList.remove('flex');
                 
+                // Simpan URL Asli juga buat Scene (siapa tau mau dipake lagi)
                 if(STATE.data.scenes[index]) {
-                    STATE.data.scenes[index].generatedUrl = objectUrl;
-                    STATE.save();
+                    STATE.data.scenes[index].generatedUrl = result.rawUrl;
+                    STATE.save(); 
                 }
             };
+
         } catch (e) {
             console.error(e);
             loader.classList.add('hidden');
