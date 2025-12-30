@@ -162,10 +162,12 @@ async function generateStoryAndChars(topic, useDialog) {
     TUGAS: Tulis cerita pendek berdasarkan konsep: "${topic}"
     ATURAN: ${styleInstruction}. Bahasa: Indonesia. Gaya: Sinematik.
     
-    SETELAH CERITA SELESAI, BUAT BARIS BARU DAN TULIS PEMISAH: ###DATA_KARAKTER###
+    TUGAS KEDUA (PENTING):
+    Setelah cerita, buat baris baru, tulis: ###DATA_KARAKTER###
+    Buat JSON ARRAY tokoh utama.
     
-    DI BAWAH PEMISAH, BUAT JSON ARRAY TOKOH UTAMA: 
-    [{"name": "Nama Tokoh", "visual": "Physical description in English (hair, face, clothes, vibe)"}]
+    FORMAT JSON: 
+    [{"name": "Nama", "visual": "Physical description in English. MUST INCLUDE: 1. Body Type (Human/Humanoid/Cyborg), 2. Skin/Fur Color & Markings (e.g. orange fur, black stripes), 3. Face Details, 4. Clothing Materials."}]
     `;
     
     // Panggil Claude (Story Model)
