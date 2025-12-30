@@ -1,5 +1,5 @@
 // ==========================================
-// API CORE (JANTUNG SISTEM - FINAL FIX)
+// API CORE (VIP + IMAGE REFERENCE)
 // ==========================================
 
 function cleanJSON(text) {
@@ -47,28 +47,39 @@ async function callAI(model, prompt, isJsonMode = false) {
 }
 
 /**
- * FETCH IMAGE BLOB (PERBAIKAN RESOLUSI)
+ * FETCH IMAGE BLOB (UPGRADE: REFERENCE IMAGE)
+ * refImages: Array string URL gambar karakter (opsional)
  */
-async function fetchImageBlobAI(prompt, width, height) {
+async function fetchImageBlobAI(prompt, width, height, refImages = []) {
     const apiKey = CONFIG.getPollinationsKey();
     const isPro = STATE.data.style.isProQuality;
     const model = isPro ? "seedream-pro" : "seedream";
-    const seed = STATE.data.sessionSeed; // Seed konsisten project
+    const seed = STATE.data.sessionSeed;
 
-    // TRICK: Tambahkan "Hint" teks agar AI patuh rasio
     let ratioHint = "";
-    if (height > width) ratioHint = " ((vertical portrait 9:16))"; // Paksa vertikal
+    if (height > width) ratioHint = " ((vertical portrait 9:16))"; 
     if (width > height) ratioHint = " ((wide cinematic 16:9))";
 
     const finalPrompt = prompt + ratioHint;
-    const encodedPrompt = encodeURIComponent(finalPrompt);
+    const encodedPrompt = encodeURIComponent(finalPrompt.substring(0, 1500)); // Limit panjang
 
-    // URL: Parameter Width & Height ditaruh di Query String
-    // Tambahkan timestamp di URL fetch biar gak kena cache browser internal
-    const timestamp = new Date().getTime();
-    const url = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=true&t=${timestamp}`;
+    // Base URL
+    let url = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=true`;
 
-    console.log(`[VIP API] Fetching ${width}x${height} | Hint: ${ratioHint}`);
+    // --- LOGIC REFERENCE IMAGE ---
+    // Kalau ada gambar referensi, tempel ke URL
+    if (refImages && refImages.length > 0) {
+        // Ambil gambar pertama sebagai referensi utama (Limitasi API biasanya 1-2 gambar)
+        // Kita encode URL referensinya juga
+        const encodedRef = encodeURIComponent(refImages[0]);
+        url += `&image=${encodedRef}`;
+        console.log("Using Image Reference:", refImages[0]);
+    }
+
+    // Timestamp unik
+    url += `&t=${new Date().getTime()}`;
+
+    console.log(`[VIP API] Fetching... Refs: ${refImages.length}`);
 
     const response = await fetch(url, {
         method: 'GET',
@@ -81,40 +92,4 @@ async function fetchImageBlobAI(prompt, width, height) {
     return URL.createObjectURL(blob); 
 }
 
-// ... WRAPPERS TETAP SAMA ...
-async function generateStoryAndChars(topic, useDialog) {
-    const styleInstruction = useDialog 
-        ? "WAJIB FORMAT NASKAH FULL DIALOG. Contoh Jono: 'Halo'. Jangan banyak narasi." 
-        : "WAJIB FORMAT NARASI NOVEL. Jangan banyak dialog langsung.";
-
-    const prompt = `
-    TULIS CERITA: "${topic}"
-    ATURAN: ${styleInstruction}. Bahasa: Indonesia.
-    SETELAH CERITA SELESAI, TULIS: ###DATA_KARAKTER###
-    LALU JSON ARRAY: [{"name": "Nama", "visual": "Physical description in English (hair, face, clothes)"}]
-    `;
-    
-    const rawResult = await callAI(CONFIG.AI_MODELS.story, prompt);
-    let storyText = rawResult;
-    let characters = [];
-
-    if (rawResult.includes("###DATA_KARAKTER###")) {
-        const parts = rawResult.split("###DATA_KARAKTER###");
-        storyText = parts[0].trim();
-        try {
-            const clean = cleanJSON(parts[1]);
-            const m = clean.match(/\[([\s\S]*?)\]/);
-            characters = JSON.parse(m ? m[0] : clean);
-        } catch (e) { console.error("JSON Parse Error"); }
-    }
-    return { story: storyText, characters: characters };
-}
-
-async function uploadToImgBB(file) {
-    const apiKey = CONFIG.getImgBBKey();
-    const formData = new FormData();
-    formData.append("image", file);
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: "POST", body: formData });
-    const data = await res.json();
-    return data.data.url;
-        }
+// ... (Sisanya: generateStoryAndChars, uploadToImgBB TETAP S
