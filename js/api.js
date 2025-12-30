@@ -1,5 +1,5 @@
 // ==========================================
-// API CORE (JANTUNG SISTEM)
+// API CORE (JANTUNG SISTEM - FINAL FIX)
 // ==========================================
 
 function cleanJSON(text) {
@@ -7,15 +7,9 @@ function cleanJSON(text) {
     return text.replace(/```json|```/g, "").trim();
 }
 
-/**
- * CORE: TEXT GENERATION (Retry Logic)
- */
 async function callAI(model, prompt, isJsonMode = false) {
     const apiKey = CONFIG.getPollinationsKey();
-    if (!apiKey) {
-        alert(CONFIG.ERRORS.missingKey);
-        throw new Error("Missing API Key");
-    }
+    if (!apiKey) { alert(CONFIG.ERRORS.missingKey); throw new Error("Missing API Key"); }
 
     const url = 'https://gen.pollinations.ai/v1/chat/completions';
     const maxRetries = 3;
@@ -25,18 +19,11 @@ async function callAI(model, prompt, isJsonMode = false) {
     while (true) {
         attempt++;
         try {
-            console.log(`[API Text] Attempt ${attempt} | Model: ${model}`);
-            
+            const bodyData = { model: model, messages: [{ role: 'user', content: prompt }] };
             const response = await fetch(url, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({ 
-                    model: model, 
-                    messages: [{ role: 'user', content: prompt }] 
-                })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                body: JSON.stringify(bodyData)
             });
 
             if (!response.ok) {
@@ -52,7 +39,6 @@ async function callAI(model, prompt, isJsonMode = false) {
             const data = await response.json();
             const content = data.choices[0].message.content;
             return isJsonMode ? cleanJSON(content) : content;
-
         } catch (err) {
             if (attempt >= maxRetries) throw err;
             await new Promise(r => setTimeout(r, baseDelay));
@@ -61,28 +47,28 @@ async function callAI(model, prompt, isJsonMode = false) {
 }
 
 /**
- * CORE: IMAGE GENERATION (VIP Fetch Blob)
- * Menggunakan Header Authorization + ObjectURL biar gambar HD dan aman.
+ * FETCH IMAGE BLOB (PERBAIKAN RESOLUSI)
  */
 async function fetchImageBlobAI(prompt, width, height) {
     const apiKey = CONFIG.getPollinationsKey();
     const isPro = STATE.data.style.isProQuality;
     const model = isPro ? "seedream-pro" : "seedream";
-    const seed = STATE.data.sessionSeed;
+    const seed = STATE.data.sessionSeed; // Seed konsisten project
 
-    // Tambahkan "Hint" orientasi otomatis biar AI gak ngasih kotak
+    // TRICK: Tambahkan "Hint" teks agar AI patuh rasio
     let ratioHint = "";
-    if (width > height) ratioHint = ", wide landscape, 16:9";
-    if (height > width) ratioHint = ", tall portrait, vertical, 9:16";
+    if (height > width) ratioHint = " ((vertical portrait 9:16))"; // Paksa vertikal
+    if (width > height) ratioHint = " ((wide cinematic 16:9))";
 
-    // Encode prompt biar URL aman
     const finalPrompt = prompt + ratioHint;
-    const encodedPrompt = encodeURIComponent(finalPrompt.substring(0, 1000)); // Potong max 1000 char
+    const encodedPrompt = encodeURIComponent(finalPrompt);
 
-    // URL Construction
-    const url = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=true`;
+    // URL: Parameter Width & Height ditaruh di Query String
+    // Tambahkan timestamp di URL fetch biar gak kena cache browser internal
+    const timestamp = new Date().getTime();
+    const url = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=true&t=${timestamp}`;
 
-    console.log(`[API Image] Fetching ${width}x${height}...`);
+    console.log(`[VIP API] Fetching ${width}x${height} | Hint: ${ratioHint}`);
 
     const response = await fetch(url, {
         method: 'GET',
@@ -92,21 +78,18 @@ async function fetchImageBlobAI(prompt, width, height) {
     if (!response.ok) throw new Error(`Image API Error: ${response.status}`);
 
     const blob = await response.blob();
-    return URL.createObjectURL(blob);
+    return URL.createObjectURL(blob); 
 }
 
-// --- WRAPPER FUNCTIONS ---
-
-// 1. One-Shot Story + Karakter
+// ... WRAPPERS TETAP SAMA ...
 async function generateStoryAndChars(topic, useDialog) {
     const styleInstruction = useDialog 
-        ? "WAJIB FORMAT NASKAH FULL DIALOG. Contoh Jono: 'Halo'." 
-        : "WAJIB FORMAT NARASI NOVEL.";
+        ? "WAJIB FORMAT NASKAH FULL DIALOG. Contoh Jono: 'Halo'. Jangan banyak narasi." 
+        : "WAJIB FORMAT NARASI NOVEL. Jangan banyak dialog langsung.";
 
     const prompt = `
     TULIS CERITA: "${topic}"
     ATURAN: ${styleInstruction}. Bahasa: Indonesia.
-    
     SETELAH CERITA SELESAI, TULIS: ###DATA_KARAKTER###
     LALU JSON ARRAY: [{"name": "Nama", "visual": "Physical description in English (hair, face, clothes)"}]
     `;
@@ -120,17 +103,13 @@ async function generateStoryAndChars(topic, useDialog) {
         storyText = parts[0].trim();
         try {
             const clean = cleanJSON(parts[1]);
-            const m = clean.match(/\[([\s\S]*?)\]/); // Cari kurung siku []
+            const m = clean.match(/\[([\s\S]*?)\]/);
             characters = JSON.parse(m ? m[0] : clean);
-        } catch (e) { 
-            console.error("JSON Parse Error:", e);
-            characters = [];
-        }
+        } catch (e) { console.error("JSON Parse Error"); }
     }
     return { story: storyText, characters: characters };
 }
 
-// 2. Upload ImgBB
 async function uploadToImgBB(file) {
     const apiKey = CONFIG.getImgBBKey();
     const formData = new FormData();
@@ -138,4 +117,4 @@ async function uploadToImgBB(file) {
     const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: "POST", body: formData });
     const data = await res.json();
     return data.data.url;
-                }
+        }
