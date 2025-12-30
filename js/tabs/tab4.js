@@ -109,49 +109,73 @@ window.setupTab4 = function() {
     };
 
     // --- 2. RENDER PANEL SCENE ---
+    // --- 2. RENDER PANEL SCENE (STRUKTUR PROMPT BARU) ---
     function renderScenes(scenes) {
         scenesContainer.innerHTML = "";
         
-        const stylePrompt = STATE.data.style.artPrompt || "Cinematic";
+        const stylePrompt = STATE.data.style.artPrompt || "Cinematic shot";
         const characters = STATE.data.story.characters || [];
         const activeRatio = STATE.data.style.ratio || "16:9"; 
 
-        // CSS Rasio
         let ratioClass = "aspect-video";
         let ratioStyle = "aspect-ratio: 16/9;";
         if (activeRatio === "9:16") { ratioClass = "aspect-[9/16]"; ratioStyle = "aspect-ratio: 9/16;"; }
         if (activeRatio === "1:1") { ratioClass = "aspect-square"; ratioStyle = "aspect-ratio: 1/1;"; }
 
         scenes.forEach((scene, index) => {
-            // INJECTION LOGIC (GABUNG PROMPT)
-            let injectedPrompt = `${stylePrompt}. Scene ${index+1}: ${scene.visual}. `;
+            // --- LOGIC PROMPT BARU (ANTI-BLEEDING) ---
+            
+            // 1. MASTER STYLE (Vibe Utama)
+            let finalPrompt = `${stylePrompt}. `;
+            
+            // 2. SCENE DESCRIPTION (Fokus ke Aksi & Background dulu)
+            // Kita kasih label biar AI tau ini settingan tempat
+            finalPrompt += `SCENE ACTION: ${scene.visual}. `;
+            
+            // 3. KARAKTER INJECTION (Dipisah tegas)
+            let charPrompts = [];
             let detectedRefs = []; 
 
             if (Array.isArray(characters)) {
                 characters.forEach(char => {
                     const charName = typeof char === 'string' ? char : char.name;
                     const charDesc = typeof char === 'string' ? '' : char.visual;
+                    
                     const regex = new RegExp(`\\b${charName}\\b`, 'i');
                     
                     if (regex.test(scene.text) || regex.test(scene.visual)) {
-                        injectedPrompt += ` (${charName}: ${charDesc}). `;
+                        // Masukin ke array dulu, jangan langsung tempel
+                        // Gunakan format: Name (Description)
+                        charPrompts.push(`${charName} is (${charDesc})`);
+                        
                         if (char.generatedUrl) detectedRefs.push(char.generatedUrl);
                     }
                 });
             }
-            injectedPrompt += " masterpiece, 8k, highly detailed.";
-            
+
+            // Kalau ada karakter di scene ini, tempel dengan kata kunci "FEATURING"
+            // Ini ngasih tau AI: "Oke, setting udah, sekarang fokus ke orangnya"
+            if (charPrompts.length > 0) {
+                finalPrompt += ` CHARACTERS: ${charPrompts.join(" AND ")}. `;
+            }
+
+            // 4. BOOSTERS & TECHNICAL
+            finalPrompt += "Detailed faces, correct anatomy, masterpiece, 8k resolution.";
+
             const existingImg = scene.generatedUrl || "logo.png";
             const opacityClass = scene.generatedUrl ? "opacity-100" : "opacity-20";
 
+            // HTML Panel (Sama kayak sebelumnya)
             const panel = document.createElement('div');
             panel.className = "glass-panel p-4 rounded-xl animate-fade-in group flex flex-col";
             panel.innerHTML = `
                 <div class="flex justify-between items-start mb-3">
-                    <span class="bg-white/10 px-2 py-1 rounded text-[10px] font-bold text-accent">SCENE ${index+1}</span>
-                    <button onclick="editScenePrompt(${index})" class="text-gray-400 hover:text-white text-xs bg-white/5 px-2 py-1 rounded">
-                        <i class="ph ph-pencil-simple"></i> Edit
-                    </button>
+                    <span class="bg-white/10 px-2 py-1 rounded text-[10px] font-bold text-accent">SCENE ${scene.id}</span>
+                    <div class="flex gap-2">
+                        <button onclick="editScenePrompt(${index})" class="text-gray-400 hover:text-white text-xs bg-white/5 px-2 py-1 rounded flex items-center gap-1">
+                            <i class="ph ph-pencil-simple"></i> Edit
+                        </button>
+                    </div>
                 </div>
                 
                 <p class="text-xs text-gray-300 mb-3 italic leading-relaxed">"${scene.text}"</p>
@@ -161,15 +185,16 @@ window.setupTab4 = function() {
                     
                     <div id="loader-${index}" class="absolute inset-0 flex flex-col items-center justify-center hidden bg-black/80 z-20">
                         <i class="ph ph-spinner animate-spin text-accent text-3xl mb-2"></i>
-                        <span class="text-[10px] text-white">RENDERING...</span>
+                        <span class="text-[10px] text-white tracking-widest">RENDERING...</span>
                     </div>
 
-                    <button onclick="renderSceneImage(${index})" class="absolute bottom-3 right-3 bg-accent hover:bg-white hover:text-accent text-white px-4 py-2 rounded-lg font-bold shadow-lg text-xs flex items-center gap-2 z-30 transition-transform active:scale-95">
+                    <button onclick="renderSceneImage(${index})" class="absolute bottom-3 right-3 bg-accent hover:bg-white hover:text-accent text-white px-4 py-2 rounded-lg font-bold shadow-lg transition-transform hover:scale-105 active:scale-95 text-xs flex items-center gap-2 z-30">
                         <i class="ph ph-paint-brush-broad"></i> RENDER
                     </button>
                 </div>
 
-                <textarea id="scene-prompt-${index}" class="hidden">${injectedPrompt}</textarea>
+                <!-- Simpan Prompt yang udah dirapikan -->
+                <textarea id="scene-prompt-${index}" class="hidden">${finalPrompt}</textarea>
                 <input type="hidden" id="scene-refs-${index}" value='${JSON.stringify(detectedRefs)}'>
             `;
             scenesContainer.appendChild(panel);
