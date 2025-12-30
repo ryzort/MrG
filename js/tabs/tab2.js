@@ -69,18 +69,27 @@ window.setupTab2 = function() {
                 statusTxt.innerText = "👁️ AI sedang melihat gambar...";
                 
                 // Ini struktur yang lu minta (Array Object)
+                // ... di dalam btnUpload.onclick ...
+
+                // ANALISA STYLE (VERSI BERSIH DARI KONTEN)
                 const visionPayload = [
                     { 
                         type: "text", 
-                        text: "Analyze the art style, lighting, and texture of this image. Describe it in one concise paragraph (under 50 words) suitable for an image generation prompt." 
+                        text: `Analyze the ARTISTIC STYLE and RENDERING TECHNIQUE of this image.
+                        
+                        CRITICAL RULES:
+                        1. IGNORE THE SUBJECT AND OBJECTS (Do NOT mention cat, apron, kitchen, clothes, character).
+                        2. FOCUS ONLY ON: Visual Vibes, Lighting (e.g. cinematic, volumetric), Texture Quality (e.g. soft fur render), Render Engine (e.g. Octane, Unreal 5), and Color Palette.
+                        3. Output must be a concise comma-separated list of style keywords.
+                        ` 
                     },
                     { 
                         type: "image_url", 
-                        image_url: { 
-                            url: imageUrl // Link ImgBB
-                        } 
+                        image_url: { url: imageUrl } 
                     }
                 ];
+                
+                // ... callAI ...
                 
                 // Panggil model 'openai' dengan payload Array
                 const styleDesc = await callAI(CONFIG.AI_MODELS.vision, visionPayload);
