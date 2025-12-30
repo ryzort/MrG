@@ -132,34 +132,34 @@ window.setupTab3 = function() {
         
         if(imgEl) imgEl.style.opacity = "0.3";
 
+        // ... di dalam window.generateSingleChar ...
         try {
             console.log(`Generating index ${index}...`);
             
-            // Panggil API (Pastikan fetchImageBlobAI ada di api.js)
-            const objectUrl = await fetchImageBlobAI(promptVal, w, h);
+            // Panggil API (Sekarang return Object)
+            const result = await fetchImageBlobAI(promptVal, w, h);
             
-            if(imgEl) {
-                imgEl.src = objectUrl;
-                imgEl.onload = () => {
-                    imgEl.classList.remove('opacity-20');
-                    imgEl.classList.add('opacity-100');
-                    loader.classList.add('hidden');
-                    loader.classList.remove('flex');
-                    
-                    // SAVE KE STATE (PERSISTENCE)
-                    // Kita update array characters di index ke-i
-                    if (typeof characters[index] !== 'object') {
-                        // Kalau masih string, convert jadi object
-                        characters[index] = { name: characters[index], visual: "", generatedUrl: objectUrl };
-                    } else {
-                        characters[index].generatedUrl = objectUrl;
-                    }
-                    
-                    // Simpan ke State Global
-                    STATE.data.story.characters = characters;
-                    STATE.save(); // Simpan ke LocalStorage
-                };
-            }
+            // Tampilkan pake Blob (Biar cepet & tajam)
+            imgEl.src = result.blobUrl;
+            
+            imgEl.onload = () => {
+                imgEl.classList.remove('opacity-20');
+                imgEl.classList.add('opacity-100');
+                loader.classList.add('hidden');
+                loader.classList.remove('flex');
+                
+                // --- UPDATE STATE (SIMPAN LINK ASLI/RAW) ---
+                // Kita simpan result.rawUrl, BUKAN result.blobUrl
+                // Karena result.rawUrl bisa dibaca server AI buat referensi Tab 4
+                if (typeof characters[index] !== 'object') {
+                    characters[index] = { name: characters[index], visual: "", generatedUrl: result.rawUrl };
+                } else {
+                    characters[index].generatedUrl = result.rawUrl;
+                }
+                
+                STATE.data.story.characters = characters;
+                STATE.save();
+            };
 
         } catch (e) {
             console.error(e);
