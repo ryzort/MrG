@@ -45,7 +45,8 @@ async function loadTab(tabId) {
                 if (tabId === 1 && window.setupTab1) window.setupTab1();
                 if (tabId === 2 && window.setupTab2) window.setupTab2();
                 if (tabId === 3 && window.setupTab3) window.setupTab3(); // INI UDAH AKTIF
-                
+                if (tabId === 4 && window.setupTab4) window.setupTab4();
+                if (tabId === 5 && window.setupTab5) window.setupTab5();
                 // Nanti Tab 4 & 5 ditambahin di sini
             }, 100); 
 
