@@ -75,69 +75,55 @@ async function callAI(model, prompt, isJsonMode = false) {
  * - Uses Header Authorization (VIP)
  * - Tuning Parameters: Guidance Scale & Strength
  */
+/**
+ * FETCH IMAGE (UPDATE: RETURN RAW URL JUGA)
+ */
 async function fetchImageBlobAI(prompt, width, height, refImages = []) {
     const apiKey = CONFIG.getPollinationsKey();
-    
-    // Pastikan membaca state terbaru
-    const isPro = STATE.data.style && STATE.data.style.isProQuality === true;
+    const isPro = STATE.data.style.isProQuality;
     const model = isPro ? "seedream-pro" : "seedream";
     const seed = STATE.data.sessionSeed;
 
-    // --- TUNING PARAMETERS ---
-    const guidance = 15; // Patuh pada prompt teks
-    const strength = 0.6; // Kreativitas ubah pose (jika ada ref image)
-
-    // 1. RATIO HINT & BOOSTER
     let ratioHint = "";
     if (width > height) ratioHint = " ((wide cinematic 16:9 landscape))";
     if (height > width) ratioHint = " ((tall vertical portrait 9:16))";
 
-    const detailBooster = ", highly detailed, sharp focus, 8k, masterpiece";
-    const finalPrompt = prompt + ratioHint + detailBooster;
-    
+    const finalPrompt = prompt + ratioHint + ", highly detailed, 8k";
     const encodedPrompt = encodeURIComponent(finalPrompt.substring(0, 1500)); 
 
-    // 2. BASE URL CONSTRUCTION
-    let url = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=true&guidance_scale=${guidance}`;
+    // URL Construction
+    let url = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=true`;
 
-    // 3. APPEND IMAGE REFERENCES (Img2Img Logic)
+    // Append References (PENTING BUAT TAB 4)
     if (refImages && Array.isArray(refImages) && refImages.length > 0) {
-        // Tambahkan strength agar tidak kaku
-        url += `&strength=${strength}`;
-        
         refImages.forEach(refUrl => {
+            // Pastikan URL-nya public (http/https), bukan blob
             if (refUrl && refUrl.startsWith('http')) {
                 url += `&image=${encodeURIComponent(refUrl)}`;
             }
         });
-        console.log(`[API Image] Using ${refImages.length} Refs (Model: ${model})`);
+        console.log(`[API] Using ${refImages.length} Refs`);
     }
 
-    // Anti-Cache Timestamp
-    url += `&t=${new Date().getTime()}`;
+    url += `&t=${new Date().getTime()}`; // Timestamp
 
-    console.log(`[API Image] Fetching ${width}x${height}...`);
+    console.log(`[API] Fetching...`);
 
-    // 4. FETCH EXECUTION (VIP PATH)
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: { 
-                'Authorization': `Bearer ${apiKey}` 
-            }
-        });
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
 
-        if (!response.ok) {
-            throw new Error(`Image Gen Failed: ${response.status}`);
-        }
+    if (!response.ok) throw new Error(`Image API Error: ${response.status}`);
 
-        const blob = await response.blob();
-        return URL.createObjectURL(blob); 
-
-    } catch (err) {
-        console.error("Fetch Image Error:", err);
-        throw err;
-    }
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    
+    // KEMBALIKAN 2 DATA: BLOB (Buat Tampil) & RAW URL (Buat Referensi nanti)
+    return {
+        blobUrl: blobUrl,
+        rawUrl: url // <-- Ini link sakti buat dikirim balik ke AI
+    };
 }
 
 // =================================================================
