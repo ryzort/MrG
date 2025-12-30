@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function switchTab(tabId) {
-    // 1. Update Tampilan Tombol Navigasi (Biar nyala yang aktif)
+    // 1. Update Tampilan Tombol Navigasi
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.getElementById(`btn-tab-${tabId}`);
     if(activeBtn) activeBtn.classList.add('active');
@@ -27,7 +27,7 @@ async function loadTab(tabId) {
         5: 'components/tab5-video.html'
     };
 
-    // Efek Fade Out (Hilang pelan-pelan)
+    // Efek Fade Out
     contentDiv.style.opacity = '0';
     
     setTimeout(async () => {
@@ -40,18 +40,14 @@ async function loadTab(tabId) {
             contentDiv.innerHTML = html;
             
             // --- BAGIAN PENTING: JALANIN OTAKNYA (JS) ---
+            // Kita kasih waktu 100ms biar HTML nempel dulu baru JS jalan
             setTimeout(() => {
-                // Kalau buka Tab 1, panggil logic Tab 1
                 if (tabId === 1 && window.setupTab1) window.setupTab1();
-                
-                // Kalau buka Tab 2, panggil logic Tab 2
                 if (tabId === 2 && window.setupTab2) window.setupTab2();
+                if (tabId === 3 && window.setupTab3) window.setupTab3(); // INI UDAH AKTIF
                 
-                // Kalau buka Tab 3, panggil logic Tab 3 (INI YG KITA AKTIFIN)
-                if (tabId === 3 && window.setupTab3) window.setupTab3(); 
-                
-                // Nanti Tab 4 & 5 kita tambahin di sini kalau filenya udah ada
-            }, 50);
+                // Nanti Tab 4 & 5 ditambahin di sini
+            }, 100); 
 
         } catch (err) {
             console.error(err);
@@ -62,7 +58,7 @@ async function loadTab(tabId) {
                 </div>`;
         }
         
-        // Efek Fade In (Muncul pelan-pelan)
+        // Efek Fade In
         contentDiv.style.opacity = '1';
     }, 200);
-                    }
+}
