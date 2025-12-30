@@ -146,17 +146,23 @@ async function fetchImageBlobAI(prompt, width, height, refImages = []) {
 
 async function generateStoryAndChars(topic, useDialog) {
     const styleInstruction = useDialog 
-        ? "WAJIB FORMAT NASKAH FULL DIALOG (Script). Contoh: Jono: 'Halo'. Minimalkan narasi." 
-        : "WAJIB FORMAT NARASI NOVEL. Fokus pada deskripsi suasana.";
+        ? "WAJIB FORMAT NASKAH FULL DIALOG (Script). Contoh: Jono: 'Halo'." 
+        : "WAJIB FORMAT NARASI NOVEL DILARANG MENGGUNAKAN DIALOG (SCRIPT) FOKUS KE NARASI DETAIL ADEGAN DAN VIBES";
 
+    // KITA TAMBAHIN ATURAN KHUSUS BUAT "NON-HUMAN"
     const prompt = `
     TUGAS: Tulis cerita pendek berdasarkan konsep: "${topic}"
     ATURAN: ${styleInstruction}. Bahasa: Indonesia. Gaya: Sinematik.
     
-    SETELAH CERITA SELESAI, BUAT BARIS BARU DAN TULIS PEMISAH: ###DATA_KARAKTER###
+    SETELAH CERITA SELESAI, TULIS: ###DATA_KARAKTER###
     
     DI BAWAH PEMISAH, BUAT JSON ARRAY TOKOH UTAMA: 
-    [{"name": "Nama Tokoh", "visual": "Physical description in English. MUST INCLUDE: 1. Body Type (Human/Humanoid/Cyborg), 2. Skin/Fur Color & Markings (e.g. orange fur, black stripes), 3. Face Details, 4. Clothing Materials."}]
+    Format: [{"name": "Nama", "visual": "Physical description in English."}]
+    
+    ATURAN DESKRIPSI VISUAL (PENTING):
+    1. Jika karakter adalah HEWAN/HUMANOID (Kucing, Harimau, dll), WAJIB gunakan kata kunci: "Anthropomorphic [Animal Name], Disney Zootopia style".
+    2. WAJIB jelaskan tekstur kulit/bulu. Contoh: "Body covered in orange fur", JANGAN biarkan "Human skin" kecuali manusia.
+    3. Jelaskan pakaian dan ekspresi wajah.
     `;
     
     const rawResult = await callAI(CONFIG.AI_MODELS.story, prompt);
@@ -170,14 +176,10 @@ async function generateStoryAndChars(topic, useDialog) {
             const clean = cleanJSON(parts[1]);
             const m = clean.match(/\[([\s\S]*?)\]/);
             characters = JSON.parse(m ? m[0] : clean);
-        } catch (e) { 
-            console.error("Gagal Parse JSON Karakter:", e);
-        }
+        } catch (e) { console.error("JSON Error"); }
     }
-    
     return { story: storyText, characters: characters };
 }
-
 async function uploadToImgBB(file) {
     const apiKey = CONFIG.getImgBBKey();
     if (!apiKey) throw new Error("API Key ImgBB belum disetting!");
