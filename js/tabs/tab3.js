@@ -1,12 +1,19 @@
+// ==========================================
+// LOGIC KHUSUS TAB 3 (CHARACTERS - FINAL)
+// ==========================================
+
 window.setupTab3 = function() {
+    console.log("[Tab 3] Loaded.");
+    
     const charGrid = document.getElementById('char-grid');
     const btnGenAll = document.getElementById('btn-gen-all-chars');
+
     const characters = STATE.data.story.characters || [];
     const stylePrompt = STATE.data.style.artPrompt || "";
     const selectedRatio = STATE.data.style.ratio || "1:1";
 
     if (characters.length === 0) {
-        if(charGrid) charGrid.innerHTML = `<div class="col-span-full text-center py-20 bg-white/5 rounded-xl border border-dashed border-white/10 text-gray-400">Data Kosong. Generate di Tab 1.</div>`;
+        if(charGrid) charGrid.innerHTML = `<div class="col-span-full text-center py-20 bg-white/5 rounded-xl border border-dashed border-white/10 text-gray-400">Data Kosong.</div>`;
         return;
     }
 
@@ -23,11 +30,15 @@ window.setupTab3 = function() {
             const charVisual = typeof char === 'string' ? "Standing" : char.visual;
             const initialPrompt = `${stylePrompt}. Character design of ${charName}, ${charVisual}. Full body shot, neutral background.`;
             
-            // Logic Persistence
+            // LOGIC PERSISTENCE (PENTING)
+            // Cek apakah ada rawUrl (Link Pollinations Asli)
             let existingImg = "logo.png";
             let opacityClass = "opacity-20";
-            // Kita pake generatedUrl (Link Pollinations Asli) buat display juga
+            
             if (typeof char === 'object' && char.generatedUrl) {
+                // Untuk ditampilkan di IMG tag, kita pake generatedUrl 
+                // (Browser akan otomatis fetch ulang, atau kita bisa cache blob, 
+                // tapi demi kestabilan antar-sesi, kita pake URL asli biar bisa direload kapan aja)
                 existingImg = char.generatedUrl;
                 opacityClass = "opacity-100";
             }
@@ -37,7 +48,6 @@ window.setupTab3 = function() {
             card.innerHTML = `
                 <div class="w-full ${ratioClass} bg-black/40 rounded-xl overflow-hidden mb-3 relative border border-white/5">
                     <img id="char-img-${index}" src="${existingImg}" class="w-full h-full object-contain ${opacityClass} transition-all duration-500">
-                    
                     <div id="loader-${index}" class="absolute inset-0 flex-col items-center justify-center hidden bg-black/80 z-20">
                         <i class="ph ph-spinner animate-spin text-accent text-3xl mb-2"></i>
                         <span class="text-[10px] text-white">GENERATING...</span>
@@ -50,7 +60,7 @@ window.setupTab3 = function() {
                 <div class="space-y-2">
                     <div class="flex justify-between items-center">
                         <h4 class="font-bold text-white text-sm truncate pr-2">${charName}</h4>
-                        <button onclick="generateSingleChar(${index})" class="text-[10px] bg-accent px-3 py-1 rounded font-bold">BUAT</button>
+                        <button onclick="generateSingleChar(${index})" class="text-[10px] bg-accent px-3 py-1 rounded font-bold hover:bg-white hover:text-accent transition-colors">BUAT</button>
                     </div>
                     <textarea id="prompt-input-${index}" class="w-full bg-black/30 text-[10px] text-gray-400 p-2 rounded h-16 resize-none">${initialPrompt}</textarea>
                 </div>
@@ -59,7 +69,7 @@ window.setupTab3 = function() {
         });
     }
 
-    // --- LOGIC GENERATE (DIRECT POLLINATIONS URL) ---
+    // --- LOGIC GENERATE (RETURN OBJECT) ---
     window.generateSingleChar = async function(index) {
         const imgEl = document.getElementById(`char-img-${index}`);
         const loader = document.getElementById(`loader-${index}`);
@@ -74,24 +84,26 @@ window.setupTab3 = function() {
         imgEl.style.opacity = "0.3";
 
         try {
-            // 1. Generate (Dapet Blob & Raw URL)
+            // Panggil API (Return Object {blobUrl, rawUrl})
             const result = await fetchImageBlobAI(promptVal, w, h);
             
-            // 2. Tampilkan Blob (Cepat)
+            // Tampilkan Blob (Cepat & Stabil)
             imgEl.src = result.blobUrl;
+            
             imgEl.onload = () => {
                 imgEl.classList.remove('opacity-20');
                 imgEl.classList.add('opacity-100');
                 loader.classList.add('hidden');
                 loader.classList.remove('flex');
 
-                // 3. Simpan RAW URL (Link Panjang Pollinations) ke State
-                // Link ini AMAN buat referensi Tab 4 karena nanti di-encode
+                // SIMPAN RAW URL KE STATE
+                // Ini yang bakal dipake Tab 4 buat referensi
                 if (typeof characters[index] !== 'object') {
                     characters[index] = { name: characters[index], visual: "", generatedUrl: result.rawUrl };
                 } else {
                     characters[index].generatedUrl = result.rawUrl;
                 }
+                
                 STATE.data.story.characters = characters;
                 STATE.save();
             };
@@ -104,19 +116,30 @@ window.setupTab3 = function() {
         }
     };
 
-    // ... (Fungsi View, Download, Gen All SAMA) ...
     window.downloadImage = function(index, name) {
         const img = document.getElementById(`char-img-${index}`);
+        if(img.src.includes('logo.png')) return;
         const a = document.createElement('a'); a.href = img.src; a.download = `MrG_${name}.png`; a.click();
     };
+
     window.viewFullImage = function(index) {
         const img = document.getElementById(`char-img-${index}`);
+        if(img.src.includes('logo.png')) return;
+        const activeRatio = STATE.data.style?.ratio || "1:1";
+        let modalStyle = "max-height: 90vh; max-width: 90vw; object-fit: contain;";
+        if (activeRatio === "9:16") modalStyle = "height: 85vh; aspect-ratio: 9/16;";
+        if (activeRatio === "16:9") modalStyle = "width: 90vw; aspect-ratio: 16/9;";
+
         const modal = document.createElement('div');
         modal.className = "fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4";
-        modal.innerHTML = `<img src="${img.src}" class="max-h-[90vh] max-w-[90vw] object-contain rounded">`;
-        modal.onclick = () => modal.remove();
+        modal.innerHTML = `
+            <div class="relative">
+                <img src="${img.src}" style="${modalStyle}" class="rounded border border-white/10">
+                <button onclick="this.parentElement.parentElement.remove()" class="absolute -top-12 right-0 text-white p-2"><i class="ph ph-x text-xl"></i></button>
+            </div>`;
         document.body.appendChild(modal);
     };
+
     if(btnGenAll) {
         btnGenAll.onclick = () => {
             if(confirm("Generate Semua?")) characters.forEach((_, idx) => setTimeout(() => generateSingleChar(idx), idx * 5000));
